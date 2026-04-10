@@ -703,7 +703,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1 bestand is al aanwezig in \"%@\". Het vervangen zal eroverheen schrijven."
+            "value" : "1 bestand bestaat al in \"%@\". Vervangen zal het overschrijven."
           }
         },
         "pl" : {
@@ -2141,7 +2141,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Annuleren"
+            "value" : "Annuleer"
           }
         },
         "pl" : {
@@ -2619,7 +2619,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kies exportmap"
+            "value" : "Kies uitvoermap"
           }
         },
         "pl" : {
@@ -2738,7 +2738,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duidelijk"
+            "value" : "Wis"
           }
         },
         "pl" : {
@@ -2857,7 +2857,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alle afbeeldingen verwijderen"
+            "value" : "Wis alle afbeeldingen"
           }
         },
         "pl" : {
@@ -2976,7 +2976,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Exportmap leegmaken"
+            "value" : "Maak uitvoermap leeg"
           }
         },
         "pl" : {
@@ -3096,7 +3096,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vergelijking sluiten"
+            "value" : "Sluit vergelijking"
           }
         },
         "pl" : {
@@ -3216,7 +3216,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Doorgaan"
+            "value" : "Verder"
           }
         },
         "pl" : {
@@ -3336,7 +3336,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voor het converteren en comprimeren is toegang nodig om bestanden op %@ op te slaan. Kies toestaan wanneer daarom wordt gevraagd."
+            "value" : "Voor het converteren en comprimeren is toegang nodig om bestanden op %@ op te slaan. Kies Toestaan wanneer daarom wordt gevraagd."
           }
         },
         "pl" : {
@@ -3574,7 +3574,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Afbeelding naar klembord kopiëren"
+            "value" : "Kopieer afbeelding naar klembord"
           }
         },
         "pl" : {
@@ -3693,7 +3693,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voorinstelling verwijderen"
+            "value" : "Verwijder voorinstelling"
           }
         },
         "pl" : {
@@ -4170,7 +4170,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Afbeelding invoegen, "
+            "value" : "Sleep of "
           }
         },
         "pl" : {
@@ -4290,7 +4290,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tijdens de vroege fase"
+            "value" : "tijdens de vroege fase"
           }
         },
         "pl" : {
@@ -4409,7 +4409,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voorinstellingsnaam bewerken"
+            "value" : "Bewerk voorinstellingsnaam"
           }
         },
         "pl" : {
@@ -5124,7 +5124,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De opmaak"
+            "value" : "Formaat"
           }
         },
         "pl" : {
@@ -5836,7 +5836,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hier zijn je voorinstellingen"
+            "value" : "Hier staan je voorinstellingen"
           }
         },
         "pl" : {
@@ -6076,7 +6076,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mapstructuur behouden"
+            "value" : "Behoud mapstructuur"
           }
         },
         "pl" : {
@@ -6195,7 +6195,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Houd de oorspronkelijke opmaak"
+            "value" : "Behoud oorspronkelijke opmaak"
           }
         },
         "pl" : {
@@ -6674,7 +6674,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Metadata"
+            "value" : "Metagegevens"
           }
         },
         "pl" : {
@@ -6793,7 +6793,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Metadata wordt verwijderd"
+            "value" : "Metagegevens worden verwijderd"
           }
         },
         "pl" : {
@@ -7151,7 +7151,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Goed"
+            "value" : "OK"
           }
         },
         "pl" : {
@@ -7270,7 +7270,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een keer"
+            "value" : "Eénmaal"
           }
         },
         "pl" : {
@@ -7984,7 +7984,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plakken "
+            "value" : "Plak "
           }
         },
         "pl" : {
@@ -8342,7 +8342,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Metadata behouden"
+            "value" : "Bewaar metagegevens"
           }
         },
         "pl" : {
@@ -9178,7 +9178,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App beoordelen"
+            "value" : "Beoordeel app"
           }
         },
         "pl" : {
@@ -9886,7 +9886,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App beoordelen"
+            "value" : "Beoordeel app"
           }
         },
         "pl" : {
@@ -10004,7 +10004,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Heb je een momentje? Een korte review helpt me enorm en zorgt dat ik door kan blijven ontwikkelen. <3"
+            "value" : "Heb je een momentje? Een korte review helpt me enorm en zorgt dat ik verder kan blijven ontwikkelen. <3"
           }
         },
         "pl" : {
@@ -10361,7 +10361,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Achtergrond verwijderen"
+            "value" : "Verwijder achtergrond"
           }
         },
         "pl" : {
@@ -10480,7 +10480,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verwijderen uit lijst"
+            "value" : "Verwijder uit lijst"
           }
         },
         "pl" : {
@@ -10838,7 +10838,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wijzigen"
+            "value" : "Wijzig grootte"
           }
         },
         "pl" : {
@@ -10957,7 +10957,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aankopen herstellen"
+            "value" : "Herstel aankopen"
           }
         },
         "pl" : {
@@ -11076,7 +11076,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Weergeven in Finder"
+            "value" : "Toon in Finder"
           }
         },
         "pl" : {
@@ -11195,7 +11195,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opslaan"
+            "value" : "Sla op"
           }
         },
         "pl" : {
@@ -11672,7 +11672,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Afbeeldingen selecteren na export"
+            "value" : "Afbeeldingen selecteren na uitvoer"
           }
         },
         "pl" : {
@@ -12031,7 +12031,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Originele afbeelding tonen"
+            "value" : "Toon originele afbeelding"
           }
         },
         "pl" : {
@@ -12150,7 +12150,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bewerkte afbeelding tonen"
+            "value" : "Toon bewerkte afbeelding"
           }
         },
         "pl" : {
@@ -12507,7 +12507,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Overschakelen naar bijsnijdmodus"
+            "value" : "Schakel naar bijsnijdmodus"
           }
         },
         "pl" : {
@@ -12626,7 +12626,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Overschakelen naar formaatwijzigingsmodus"
+            "value" : "Schakel naar formaatwijzigingsmodus"
           }
         },
         "pl" : {
@@ -12745,7 +12745,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Doelwit"
+            "value" : "Doel"
           }
         },
         "pl" : {
@@ -12983,7 +12983,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Metadata verwijderen omwisselen"
+            "value" : "Activeer verwijdering metagegevens"
           }
         },
         "pl" : {
@@ -13103,7 +13103,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Onbeperkte transfers"
+            "value" : "Onbeperkte conversies"
           }
         },
         "pl" : {
@@ -13223,7 +13223,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "W"
+            "value" : "B"
           }
         },
         "pl" : {
@@ -13462,7 +13462,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De aanbieding"
+            "value" : "Breedte"
           }
         },
         "pl" : {
