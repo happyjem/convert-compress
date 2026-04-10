@@ -163,18 +163,14 @@ extension ImageToolsViewModel {
     
     private func loadComparisonPreview(for asset: ImageAsset) async {
         let assetID = asset.id
-        
-        // Calculate crop region
         let cropRegion = await MainActor.run { calculateCropRegion(for: asset) }
         
-        // Load original image off main thread
         let original = await Task.detached(priority: .userInitiated) {
             NSImage(contentsOf: asset.originalURL)
         }.value
         
         let originalSize = original?.size
         
-        // Check if this asset is still selected before updating
         guard await isStillSelected(assetID) else { return }
         
         await MainActor.run {
@@ -189,14 +185,20 @@ extension ImageToolsViewModel {
             )
         }
         
-        // Process image in background (in-memory)
         do {
-            let pipeline = buildPipeline()
+            let cached = cachedProcessedData(for: assetID)
+            let pipeline = cached == nil ? buildPipeline() : nil
+
             let (processed, processedPixelSize) = try await Task.detached(priority: .userInitiated) {
-                let encoded = try pipeline.renderEncodedData(on: asset)
-                let image = NSImage(data: encoded.data)
-                // Get actual pixel dimensions (not points) for accurate 1:1 zoom
-                let pixelSize = ImageMetadata.pixelSize(for: encoded.data)
+                let data: Data
+                if let cached {
+                    data = cached.data
+                } else {
+                    let encoded = try pipeline!.renderEncodedData(on: asset)
+                    data = encoded.data
+                }
+                let image = NSImage(data: data)
+                let pixelSize = ImageMetadata.pixelSize(for: data)
                 return (image, pixelSize)
             }.value
             

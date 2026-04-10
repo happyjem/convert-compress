@@ -116,7 +116,7 @@ struct ComparisonView: View {
         }
         .onChange(of: preview.processedImage) { _, newImage in
             if newImage != nil {
-                vm.triggerEstimationForVisible([asset])
+                vm.scheduleProcessing()
             }
         }
         .onDisappear {

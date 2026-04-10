@@ -25,7 +25,7 @@ struct ImageChangeInfo {
         self.originalPixelSize = asset.originalPixelSize
         self.targetPixelSize = preview.targetPixelSize
         self.originalFileSize = asset.originalFileSizeBytes
-        self.estimatedOutputSize = vm.estimatedBytes[asset.id] ?? preview.estimatedOutputBytes
+        self.estimatedOutputSize = vm.estimatedByteCount(for: asset.id) ?? preview.estimatedOutputBytes
         self.originalFormat = ImageExporter.inferFormat(from: asset.originalURL)
         self.targetFormat = vm.selectedFormat ?? originalFormat
         
@@ -77,13 +77,6 @@ struct ImageItem: View {
         .contentShape(Rectangle())
         .onHover(perform: handleHover)
         .animation(.easeInOut(duration: 0.15), value: isHovering)
-        .onChange(of: vm.resizeMode) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.resizeWidth) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.resizeHeight) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.resizeLongEdge) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.selectedFormat) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.compressionPercent) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.removeMetadata) { vm.triggerEstimationForVisible([asset]) }
         .overlay { hoverBorder }
         .onDisappear { removeKeyMonitor() }
     }
@@ -117,7 +110,7 @@ private extension ImageItem {
     var hoverControlsOverlay: some View {
         ZStack(alignment: .topTrailing) {
             Color.clear
-            HoverControls(asset: asset, vm: vm, isVisible: isHovering)
+            HoverControls(asset: asset, isVisible: isHovering)
         }
     }
     

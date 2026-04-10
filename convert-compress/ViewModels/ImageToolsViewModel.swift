@@ -57,10 +57,16 @@ final class ImageToolsViewModel: ObservableObject {
     
     @Published var presets: [Preset] = []
     
-    // MARK: - Estimation State
+    // MARK: - Processed Image Cache
     
-    @Published var estimatedBytes: [UUID: Int] = [:]
-    var estimationTask: Task<Void, Never>? = nil
+    /// Cached processed results from estimation. Reused by clipboard,
+    /// comparison, and export to avoid redundant processing.
+    @Published var processedCache: [UUID: ProcessedImageData] = [:]
+    var processingTask: Task<Void, Never>? = nil
+    var processingDebounceWorkItem: DispatchWorkItem?
+    
+    /// IDs of assets currently visible in the grid, updated by ImagesGridView.
+    var visibleAssetIDs: Set<UUID> = []
     
     // MARK: - Export Progress
     
@@ -99,6 +105,7 @@ final class ImageToolsViewModel: ObservableObject {
     init() {
         loadPersistedState()
         setupComparisonObservation()
+        setupProcessingCacheObservation()
         setupPersistenceObservation()
         loadPresets()
     }
@@ -127,7 +134,7 @@ final class ImageToolsViewModel: ObservableObject {
         withAnimation(.spring(response: 0.5, dampingFraction: 0.85, blendDuration: 0.3)) {
             images.removeAll()
         }
-        // Reset automatic source-based destination only if no explicit export directory is set
+        processedCache.removeAll()
         if exportDirectory == nil {
             sourceDirectory = nil
         }

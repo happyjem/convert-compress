@@ -1,28 +1,31 @@
 import Foundation
-import CoreImage
 
 struct TrueSizeEstimator {
     static func estimate(
         assets: [ImageAsset],
         configuration: ProcessingConfiguration
-    ) async -> [UUID: Int] {
+    ) async -> [UUID: ProcessedImageData] {
         guard !assets.isEmpty else { return [:] }
 
+        let pipeline = PipelineBuilder().build(configuration: configuration, exportDirectory: nil)
         let maxConcurrent = 4
-        var results: [UUID: Int] = [:]
+        var results: [UUID: ProcessedImageData] = [:]
         var index = 0
 
         while index < assets.count {
+            guard !Task.isCancelled else { break }
+
             let end = min(index + maxConcurrent, assets.count)
             let slice = Array(assets[index..<end])
-            await withTaskGroup(of: (UUID, Int)?.self) { group in
+            await withTaskGroup(of: (UUID, ProcessedImageData)?.self) { group in
                 for asset in slice {
                     group.addTask(priority: .utility) {
-                        estimateOne(asset: asset, configuration: configuration)
+                        guard !Task.isCancelled else { return nil }
+                        return processOne(asset: asset, pipeline: pipeline, configuration: configuration)
                     }
                 }
                 for await item in group {
-                    if let (id, bytes) = item { results[id] = bytes }
+                    if let (id, result) = item { results[id] = result }
                 }
             }
             index = end
@@ -32,29 +35,19 @@ struct TrueSizeEstimator {
         return results
     }
 
-    private static func estimateOne(
+    private static func processOne(
         asset: ImageAsset,
+        pipeline: ProcessingPipeline,
         configuration: ProcessingConfiguration
-    ) -> (UUID, Int)? {
+    ) -> (UUID, ProcessedImageData)? {
         do {
-            let pipeline = PipelineBuilder().build(configuration: configuration, exportDirectory: nil)
-
-            guard let token = SandboxAccessToken(url: asset.originalURL) else { return nil }
-            defer { token.stop() }
-
-            var ci = try loadCIImage(from: asset.originalURL, operations: pipeline.operations)
-            for op in pipeline.operations {
-                ci = try op.transformed(ci)
-            }
-
-            let encoded = try ImageExporter.encodeToData(
-                ciImage: ci,
-                originalURL: asset.originalURL,
-                format: pipeline.finalFormat,
-                compressionQuality: pipeline.compressionPercent.map { max(min($0, 1.0), 0.01) },
-                stripMetadata: pipeline.removeMetadata
+            let encoded = try pipeline.renderEncodedData(on: asset)
+            let result = ProcessedImageData(
+                data: encoded.data,
+                uti: encoded.uti,
+                configuration: configuration
             )
-            return (asset.id, encoded.data.count)
+            return (asset.id, result)
         } catch {
             return nil
         }

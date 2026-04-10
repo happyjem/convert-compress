@@ -43,15 +43,16 @@ extension ImageToolsViewModel {
     
     private func executeExport() {
         let pipeline = buildPipeline()
+        let config = currentConfiguration
         let targets = images
         guard !targets.isEmpty else { return }
 
-        // Preflight replace confirmation (single dialog for all files)
         if !preflightReplaceIfNecessary(pipeline: pipeline, targets: targets) {
             return
         }
 
         let directories = uniqueDestinationDirectories(for: targets, pipeline: pipeline)
+        let cacheSnapshot = processedCache
 
         Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
@@ -79,7 +80,11 @@ extension ImageToolsViewModel {
                     guard let asset = iterator.next() else { return }
                     group.addTask(priority: .utility) {
                         do {
-                            let updated = try pipeline.run(on: asset)
+                            let cached = cacheSnapshot[asset.id]
+                            let preEncoded = (cached?.configuration == config)
+                                ? (data: cached!.data, uti: cached!.uti)
+                                : nil
+                            let updated = try pipeline.run(on: asset, preEncoded: preEncoded)
                             return (asset, updated)
                         } catch {
                             return nil

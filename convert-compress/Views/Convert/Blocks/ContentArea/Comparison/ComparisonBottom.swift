@@ -76,7 +76,7 @@ struct ComparisonBottom: View {
     }
     
     private var estimatedOutputBytes: Int? {
-        vm.estimatedBytes[asset.id] ?? vm.previewInfo(for: asset).estimatedOutputBytes
+        vm.estimatedByteCount(for: asset.id) ?? vm.previewInfo(for: asset).estimatedOutputBytes
     }
 }
 
