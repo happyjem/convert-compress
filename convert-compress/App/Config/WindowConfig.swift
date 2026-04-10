@@ -4,6 +4,8 @@ import AppKit
 
 @MainActor
 enum WindowConfigurator {
+    private static var didCenterOnce = false
+
     static func configureMainWindow() {
         guard let window = NSApp.windows.first else { return }
         window.isOpaque = false
@@ -15,6 +17,9 @@ enum WindowConfigurator {
         toolbar.displayMode = .iconOnly
         window.toolbar = toolbar
 
-        window.center()
+        if !didCenterOnce {
+            window.center()
+            didCenterOnce = true
+        }
     }
 } 
