@@ -133,6 +133,17 @@ struct ComparisonView: View {
                 // Original image layer with zoom/pan
                 originalImageLayer(imageFrame: imageFrame)
                 
+                // Pixelated preview while processing
+                if preview.isLoading && preview.processedImage == nil && showUI,
+                   let originalImage = preview.originalImage {
+                    pixelatedPreviewLayer(
+                        sourceImage: originalImage,
+                        imageFrame: imageFrame
+                    )
+                    .id(ObjectIdentifier(originalImage))
+                    .transition(.opacity)
+                }
+                
                 // Processed image layer with zoom/pan and crop alignment
                 if let processedImage = preview.processedImage, showUI {
                     processedImageLayer(
@@ -191,9 +202,10 @@ struct ComparisonView: View {
     }
     
     private func processedImageLayer(image: NSImage, imageFrame: CGRect) -> some View {
-        let cropAlignment = calculateCropAlignment(
+        let cropAlignment = cropAlignment(
             imageFrame: imageFrame,
-            cropRegion: preview.cropRegion
+            cropRegion: preview.cropRegion,
+            requireProcessedSize: true
         )
         let isCropped = preview.cropRegion != nil
         
@@ -226,39 +238,49 @@ struct ComparisonView: View {
         }
     }
     
-    // MARK: - Crop Alignment Calculation
+    // MARK: - Pixelated Preview Layer
     
-    private func calculateCropAlignment(imageFrame: CGRect, cropRegion: CGRect?) -> (size: CGSize, offset: CGPoint) {
-        guard let cropRegion = cropRegion,
+    private func pixelatedPreviewLayer(sourceImage: NSImage, imageFrame: CGRect) -> some View {
+        let cropAlignment = cropAlignment(imageFrame: imageFrame, cropRegion: preview.cropRegion)
+        
+        return PixelatedPreview(
+            sourceImage: sourceImage,
+            cropRegion: preview.cropRegion,
+            displaySize: cropAlignment.size,
+            displayOffset: cropAlignment.offset,
+            imageFrameSize: imageFrame.size,
+            sliderPosition: sliderPosition,
+            zoomPanState: zoomPanState
+        )
+    }
+    
+    // MARK: - Crop Alignment
+    
+    /// Maps a normalized crop region onto the displayed image frame.
+    /// Returns the full image size with zero offset when there is no crop.
+    private func cropAlignment(imageFrame: CGRect, cropRegion: CGRect?, requireProcessedSize: Bool = false) -> (size: CGSize, offset: CGPoint) {
+        guard let cropRegion,
               let originalSize = preview.originalSize,
-              let _ = preview.processedSize else {
-            // No crop - processed image fits same as original
+              !requireProcessedSize || preview.processedSize != nil else {
             return (size: imageFrame.size, offset: .zero)
         }
         
-        // Calculate scale factor to match original's display size
-        // The processed image should appear at the size it would be if it were part of the original
-        let originalDisplayWidth = imageFrame.width
-        let originalDisplayHeight = imageFrame.height
-        
-        // Scale to make processed image match the dimensions it occupied in the original
-        let cropWidthInOriginal = originalSize.width * cropRegion.width
-        let cropHeightInOriginal = originalSize.height * cropRegion.height
-        
-        let scaleX = originalDisplayWidth / originalSize.width
-        let scaleY = originalDisplayHeight / originalSize.height
-        
-        let processedDisplayWidth = cropWidthInOriginal * scaleX
-        let processedDisplayHeight = cropHeightInOriginal * scaleY
-        
-        // Calculate offset to position at crop region
-        let offsetX = (cropRegion.origin.x * originalDisplayWidth) + (processedDisplayWidth / 2) - (originalDisplayWidth / 2)
-        let offsetY = (cropRegion.origin.y * originalDisplayHeight) + (processedDisplayHeight / 2) - (originalDisplayHeight / 2)
-        
-        return (
-            size: CGSize(width: processedDisplayWidth, height: processedDisplayHeight),
-            offset: CGPoint(x: offsetX, y: offsetY)
+        let scale = CGSize(
+            width: imageFrame.width / originalSize.width,
+            height: imageFrame.height / originalSize.height
         )
+        
+        let cropDisplaySize = CGSize(
+            width: originalSize.width * cropRegion.width * scale.width,
+            height: originalSize.height * cropRegion.height * scale.height
+        )
+        
+        let offset = CGPoint(
+            x: cropRegion.origin.x * imageFrame.width + cropDisplaySize.width / 2 - imageFrame.width / 2,
+            y: cropRegion.origin.y * imageFrame.height + cropDisplaySize.height / 2 - imageFrame.height / 2
+        )
+        
+        return (size: cropDisplaySize, offset: offset)
     }
     
     // MARK: - Zoom/Pan Helpers
