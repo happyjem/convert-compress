@@ -83,6 +83,17 @@ struct ImageItem: View {
 
 // MARK: View Components
 private extension ImageItem {
+    var isActiveComparison: Bool {
+        vm.comparisonSelection?.assetID == asset.id
+    }
+    
+    /// Only the currently-compared grid item (or all items when no comparison is active)
+    /// should participate in the hero geometry group. Other items use `properties: []`
+    /// so they don't produce stale matches during rapid navigation.
+    var heroProperties: MatchedGeometryProperties {
+        vm.comparisonSelection == nil || isActiveComparison ? .frame : []
+    }
+    
     @ViewBuilder
     var thumbnailLayer: some View {
         ZStack {
@@ -93,15 +104,23 @@ private extension ImageItem {
                     .fill(.quaternary)
             }
         }
-        .matchedGeometryEffect(id: "hero-\(asset.id)", in: heroNamespace)
-        .opacity(vm.comparisonSelection?.assetID == asset.id ? 0 : 1)
+        .matchedGeometryEffect(
+            id: "hero-\(asset.id)",
+            in: heroNamespace,
+            properties: heroProperties,
+        )
+        .opacity(isActiveComparison ? 0 : 1)
     }
     
     var fileNameOverlay: some View {
         ZStack(alignment: .topLeading) {
             Color.clear
             SingleLineOverlayBadge(text: fileName)
-                .matchedGeometryEffect(id: "filename-\(asset.id)", in: heroNamespace)
+                .matchedGeometryEffect(
+                    id: "filename-\(asset.id)",
+                    in: heroNamespace,
+                    properties: heroProperties,
+                )
                 .padding(8)
         }
     }
