@@ -6,13 +6,13 @@ import OSLog
 extension ImageToolsViewModel {
     nonisolated static let ingestionLogger = Logger(subsystem: AppConstants.bundleIdentifier, category: "Ingestion")
     func addURLs(_ urls: [URL]) {
-        Task(priority: .userInitiated) { [weak self] in
+        Task(priority: .medium) { [weak self] in
             await self?.ingest(urls: urls)
         }
     }
 
     func addProvidersStreaming(_ providers: [NSItemProvider], batchSize: Int = 64) {
-        Task(priority: .userInitiated) { [weak self] in
+        Task(priority: .medium) { [weak self] in
             guard let self else { return }
             let stream = IngestionCoordinator.streamURLs(from: providers, batchSize: batchSize)
             for await urls in stream {
@@ -22,7 +22,7 @@ extension ImageToolsViewModel {
     }
 
     func ingestURLStream(_ stream: AsyncStream<[URL]>) {
-        Task(priority: .userInitiated) { [weak self] in
+        Task(priority: .medium) { [weak self] in
             guard let self else { return }
             for await urls in stream {
                 await self.ingest(urls: urls)
@@ -139,24 +139,25 @@ extension ImageToolsViewModel {
     
     private func loadThumbnails(for assets: [ImageAsset]) async {
         let semaphore = AsyncSemaphore(value: 16)
+        let scale = NSScreen.main?.backingScaleFactor ?? 2.0
 
         await withTaskGroup(of: Void.self) { group in
             for asset in assets {
-                group.addTask(priority: .userInitiated) { [weak self] in
-                    await self?.loadThumbnail(for: asset, semaphore: semaphore)
+                group.addTask(priority: .medium) { [weak self] in
+                    await self?.loadThumbnail(for: asset, scale: scale, semaphore: semaphore)
                 }
             }
         }
     }
     
-    private func loadThumbnail(for asset: ImageAsset, semaphore: AsyncSemaphore) async {
+    private func loadThumbnail(for asset: ImageAsset, scale: CGFloat, semaphore: AsyncSemaphore) async {
         await semaphore.acquire()
         defer { Task { await semaphore.release() } }
         
         let fileName = asset.originalURL.lastPathComponent
         Self.ingestionLogger.debug("Thumbnail load begin: \(fileName, privacy: .public)")
         
-        let output = await ThumbnailGenerator.load(for: asset.originalURL)
+        let output = await ThumbnailGenerator.load(for: asset.originalURL, scale: scale)
         
         Self.ingestionLogger.debug("""
             Thumbnail load done: \(fileName, privacy: .public) \

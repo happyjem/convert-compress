@@ -58,13 +58,15 @@ extension ImageToolsViewModel {
     private func runProcessing() {
         processingTask?.cancel()
         let config = currentConfiguration
-        let visibleAssets = images.filter { visibleAssetIDs.contains($0.id) }
-        guard !visibleAssets.isEmpty else { return }
+        let assetsToProcess = images
+            .filter { visibleAssetIDs.contains($0.id) }
+            .filter { processedCache[$0.id]?.configuration != config }
+        guard !assetsToProcess.isEmpty else { return }
 
         processingTask = Task(priority: .utility) { [weak self] in
             guard let self else { return }
             let results = await TrueSizeEstimator.estimate(
-                assets: visibleAssets,
+                assets: assetsToProcess,
                 configuration: config
             )
             guard !Task.isCancelled else { return }

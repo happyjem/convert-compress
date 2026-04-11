@@ -5,13 +5,11 @@ import AppKit
 extension ImageToolsViewModel {
     func buildPipeline() -> ProcessingPipeline {
         let keepStructure = UserDefaults.standard.bool(forKey: PreferencesStore.keepFolderStructure)
-        let pipeline = PipelineBuilder().build(
+        return PipelineBuilder().build(
             configuration: currentConfiguration,
             exportDirectory: exportDirectory,
             folderStructureRoot: keepStructure ? sourceDirectory : nil
         )
-        if let fmt = selectedFormat { bumpRecentFormats(fmt) }
-        return pipeline
     }
 
 
@@ -43,6 +41,7 @@ extension ImageToolsViewModel {
     
     private func executeExport() {
         let pipeline = buildPipeline()
+        if let fmt = selectedFormat { bumpRecentFormats(fmt) }
         let config = currentConfiguration
         let targets = images
         guard !targets.isEmpty else { return }

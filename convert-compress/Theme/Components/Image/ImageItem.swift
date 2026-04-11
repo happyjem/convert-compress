@@ -21,11 +21,10 @@ struct ImageChangeInfo {
     init(asset: ImageAsset, vm: ImageToolsViewModel) {
         let preview = vm.previewInfo(for: asset)
         
-        // Store original and target values
         self.originalPixelSize = asset.originalPixelSize
         self.targetPixelSize = preview.targetPixelSize
         self.originalFileSize = asset.originalFileSizeBytes
-        self.estimatedOutputSize = vm.estimatedByteCount(for: asset.id) ?? preview.estimatedOutputBytes
+        self.estimatedOutputSize = vm.estimatedByteCount(for: asset.id)
         self.originalFormat = ImageExporter.inferFormat(from: asset.originalURL)
         self.targetFormat = vm.selectedFormat ?? originalFormat
         

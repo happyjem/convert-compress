@@ -2,7 +2,7 @@ import Foundation
 
 extension ImageToolsViewModel {
     func previewInfo(for asset: ImageAsset) -> PreviewInfo {
-        PreviewEstimator().estimate(
+        PreviewEstimator.estimate(
             for: asset,
             resizeMode: resizeMode,
             resizeWidth: resizeWidth,
