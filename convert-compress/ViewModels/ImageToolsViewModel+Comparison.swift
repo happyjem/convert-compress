@@ -55,41 +55,16 @@ extension ImageToolsViewModel {
             }
             .store(in: &cancellables)
         
-        // Observe pipeline-affecting properties and trigger comparison refresh
-        Publishers.CombineLatest4(
-            $resizeMode,
-            $selectedFormat,
-            $compressionPercent,
-            $resizeWidth
-        )
-        .dropFirst() // Skip initial value
-        .sink { [weak self] _ in
-            self?.scheduleComparisonPreviewRefresh()
-        }
-        .store(in: &cancellables)
-        
-        Publishers.CombineLatest3(
-            $flipV,
-            $removeBackground,
-            $removeMetadata
-        )
-        .dropFirst()
-        .sink { [weak self] _ in
-            self?.scheduleComparisonPreviewRefresh()
-        }
-        .store(in: &cancellables)
-        
-        $resizeHeight
-            .dropFirst()
+        // Refresh comparison preview when any pipeline-affecting setting changes
+        var lastConfig = currentConfiguration
+        objectWillChange
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.scheduleComparisonPreviewRefresh()
-            }
-            .store(in: &cancellables)
-        
-        $resizeLongEdge
-            .dropFirst()
-            .sink { [weak self] _ in
-                self?.scheduleComparisonPreviewRefresh()
+                guard let self else { return }
+                let config = self.currentConfiguration
+                guard config != lastConfig else { return }
+                lastConfig = config
+                self.scheduleComparisonPreviewRefresh()
             }
             .store(in: &cancellables)
     }
@@ -163,18 +138,14 @@ extension ImageToolsViewModel {
     
     private func loadComparisonPreview(for asset: ImageAsset) async {
         let assetID = asset.id
-        
-        // Calculate crop region
         let cropRegion = await MainActor.run { calculateCropRegion(for: asset) }
         
-        // Load original image off main thread
-        let original = await Task.detached(priority: .userInitiated) {
+        let original = await Task.detached(priority: .medium) {
             NSImage(contentsOf: asset.originalURL)
         }.value
         
         let originalSize = original?.size
         
-        // Check if this asset is still selected before updating
         guard await isStillSelected(assetID) else { return }
         
         await MainActor.run {
@@ -189,20 +160,33 @@ extension ImageToolsViewModel {
             )
         }
         
-        // Process image in background (in-memory)
         do {
-            let pipeline = buildPipeline()
-            let (processed, processedPixelSize) = try await Task.detached(priority: .userInitiated) {
-                let encoded = try pipeline.renderEncodedData(on: asset)
-                let image = NSImage(data: encoded.data)
-                // Get actual pixel dimensions (not points) for accurate 1:1 zoom
-                let pixelSize = ImageMetadata.pixelSize(for: encoded.data)
-                return (image, pixelSize)
+            let cached = cachedProcessedData(for: assetID)
+            let pipeline = cached == nil ? buildPipeline() : nil
+            let config = currentConfiguration
+
+            let (processed, processedPixelSize, cacheEntry) = try await Task.detached(priority: .medium) {
+                let data: Data
+                let cacheEntry: ProcessedImageData?
+                if let cached {
+                    data = cached.data
+                    cacheEntry = nil
+                } else {
+                    let encoded = try pipeline!.renderEncodedData(on: asset)
+                    data = encoded.data
+                    cacheEntry = ProcessedImageData(data: data, uti: encoded.uti, configuration: config)
+                }
+                let image = NSImage(data: data)
+                let pixelSize = ImageMetadata.pixelSize(for: data)
+                return (image, pixelSize, cacheEntry)
             }.value
             
             guard await isStillSelected(assetID) else { return }
             
             await MainActor.run {
+                if let cacheEntry {
+                    processedCache[assetID] = cacheEntry
+                }
                 comparisonPreview = ComparisonPreviewState(
                     originalImage: original,
                     processedImage: processed,

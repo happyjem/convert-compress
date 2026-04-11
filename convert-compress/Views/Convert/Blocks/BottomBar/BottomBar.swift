@@ -6,13 +6,7 @@ struct BottomBar: View {
     var body: some View {
         HStack(spacing: 8) {
             HStack(spacing: 8) {
-                PillButton(role: .destructive) {
-                    vm.clearAll()
-                } label: {
-                    Text(String(localized: "Clear"))
-                }
-                .help(String(localized: "Clear all images"))
-                .disabled(vm.images.isEmpty)
+                ClearButton()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             

@@ -14,21 +14,20 @@ struct ProcessingPipeline {
         operations.append(op)
     }
 
-    func run(on asset: ImageAsset) throws -> ImageAsset {
-        let result = asset
-        let currentURL = result.originalURL
+    /// Process an asset and write it to its destination.
+    /// When `preEncoded` is provided (e.g. from the estimation cache),
+    /// the expensive encode step is skipped entirely.
+    func run(on asset: ImageAsset, preEncoded: (data: Data, uti: UTType)? = nil) throws -> ImageAsset {
+        let currentURL = asset.originalURL
 
-        // Start security-scoped access if needed
         guard let sourceToken = SandboxAccessToken(url: currentURL) else {
             throw ImageOperationError.permissionDenied
         }
         defer { sourceToken.stop() }
 
-        // Process and encode once according to selected format and compression
-        let encoded = try processAndEncode(from: currentURL)
-        let plan = destinationPlan(for: result, uti: encoded.uti)
+        let encoded = try preEncoded ?? processAndEncode(from: currentURL)
+        let plan = destinationPlan(for: asset, uti: encoded.uti)
 
-        // Write into destination directory and atomically replace/move into place
         let destParent = plan.directory
         if !FileManager.default.fileExists(atPath: destParent.path) {
             try FileManager.default.createDirectory(at: destParent, withIntermediateDirectories: true)
@@ -47,26 +46,25 @@ struct ProcessingPipeline {
             try FileManager.default.moveItem(at: tempInDest, to: plan.url)
         }
 
-        var updated = result
+        var updated = asset
         updated.workingURL = plan.url
         updated.isEdited = true
         return updated
     }
 
-    // Apply operations and return a temporary file URL for the processed image without committing to a destination
-    func renderTemporaryURL(on asset: ImageAsset) throws -> URL {
-        // processAndEncode handles its own sandbox token
-        let encoded = try processAndEncode(from: asset.originalURL)
-        let tempDir = FileManager.default.temporaryDirectory
+    /// Write the processed image to a temporary file and return its URL.
+    /// When `preEncoded` is provided, the expensive encode step is skipped.
+    func renderTemporaryURL(on asset: ImageAsset, preEncoded: (data: Data, uti: UTType)? = nil) throws -> URL {
+        let encoded = try preEncoded ?? processAndEncode(from: asset.originalURL)
         let ext = ImageIOCapabilities.shared.preferredFilenameExtension(for: encoded.uti)
         let base = asset.originalURL.deletingPathExtension().lastPathComponent
         let tempFilename = base + "_tmp_" + String(UUID().uuidString.prefix(8)) + "." + ext
-        let outputURL = tempDir.appendingPathComponent(tempFilename)
+        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(tempFilename)
         try encoded.data.write(to: outputURL, options: [.atomic])
         return outputURL
     }
 
-    // Apply operations and return encoded data with the chosen UTType for clipboard or sharing
+    /// Process and return encoded data with the chosen UTType.
     func renderEncodedData(on asset: ImageAsset) throws -> (data: Data, uti: UTType) {
         return try processAndEncode(from: asset.originalURL)
     }

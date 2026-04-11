@@ -88,11 +88,10 @@ struct InfoOverlay: View {
 // MARK: - Hover Controls
 struct HoverControls: View {
     let asset: ImageAsset
-    let vm: ImageToolsViewModel
     let isVisible: Bool
     
+    @EnvironmentObject private var vm: ImageToolsViewModel
     @State private var copyState: CopyState = .idle
-    private let cornerRadius: CGFloat = 6
     
     private enum CopyState {
         case idle, loading, success, error
@@ -107,7 +106,7 @@ struct HoverControls: View {
         .font(.system(size: 13))
         .foregroundStyle(.secondary)
         .padding(6)
-        .background(OverlayBackground(cornerRadius: cornerRadius))
+        .background(OverlayBackground(cornerRadius: 6))
         .padding(6)
         .frame(maxWidth: .infinity, alignment: .bottomTrailing)
         .opacity(isVisible ? 1 : 0)
@@ -122,7 +121,7 @@ struct HoverControls: View {
     }
     
     private var copyButton: some View {
-        Button(action: copyImageAction) {
+        Button(action: copyToClipboard) {
             ZStack {
                 if copyState == .loading {
                     ProgressView()
@@ -167,31 +166,27 @@ struct HoverControls: View {
         .help(String(localized: "Remove from list"))
     }
     
-    private func copyImageAction() {
+    private func copyToClipboard() {
         copyState = .loading
         
+        let cached = vm.cachedProcessedData(for: asset.id)
+        let preEncoded = cached.map { (data: $0.data, uti: $0.uti) }
         let pipeline = vm.buildPipeline()
         let localAsset = asset
         
         Task.detached {
-            let result: CopyState
+            let success: Bool
             do {
-                let tempURL = try pipeline.renderTemporaryURL(on: localAsset)
+                let tempURL = try pipeline.renderTemporaryURL(on: localAsset, preEncoded: preEncoded)
                 ClipboardService.copyFileURL(tempURL)
-                result = .success
+                success = true
             } catch {
-                result = .error
+                success = false
             }
             
-            await MainActor.run {
-                copyState = result
-            }
-            
+            await MainActor.run { copyState = success ? .success : .error }
             try? await Task.sleep(for: .seconds(1))
-            
-            await MainActor.run {
-                copyState = .idle
-            }
+            await MainActor.run { copyState = .idle }
         }
     }
 }

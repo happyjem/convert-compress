@@ -2,12 +2,10 @@ import Foundation
 
 struct PreviewInfo {
     let targetPixelSize: CGSize?
-    let estimatedOutputBytes: Int?
 }
 
-struct PreviewEstimator {
-    // Keep only target pixel size calculation for layout; do not estimate bytes here.
-    func estimate(for asset: ImageAsset,
+enum PreviewEstimator {
+    static func estimate(for asset: ImageAsset,
                   resizeMode: ResizeMode,
                   resizeWidth: String,
                   resizeHeight: String,
@@ -42,8 +40,7 @@ struct PreviewEstimator {
             }
             return size
         }()
-        // Report no bytes here; UI will show "--- KB" until background estimator fills it.
-        return PreviewInfo(targetPixelSize: targetSize, estimatedOutputBytes: nil)
+        return PreviewInfo(targetPixelSize: targetSize)
     }
 }
 

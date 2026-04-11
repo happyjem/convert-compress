@@ -8,11 +8,10 @@ struct ThumbnailGenerator {
         let fileSizeBytes: Int?
     }
 
-    static func load(for url: URL, maxPixelSize: CGFloat = 256) async -> Output {
+    static func load(for url: URL, scale: CGFloat, maxPixelSize: CGFloat = 256) async -> Output {
         ImageToolsViewModel.ingestionLogger.debug("Loading thumbnail: \(url.lastPathComponent, privacy: .public)")
         
         let standardizedURL = url.standardizedFileURL
-        let scale = await MainActor.run { NSScreen.main?.backingScaleFactor ?? 2.0 }
         let pixelMax = max(1, Int(maxPixelSize * scale))
 
         let fileSizeBytes = try? standardizedURL.resourceValues(forKeys: [.fileSizeKey]).fileSize

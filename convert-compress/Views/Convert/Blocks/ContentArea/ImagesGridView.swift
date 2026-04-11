@@ -10,11 +10,10 @@ struct ImagesGridView: View {
     @State private var debounceWorkItem: DispatchWorkItem? = nil
     @State private var appearedIds: Set<UUID> = []
     
-    private func scheduleEstimation() {
+    private func scheduleVisibilityUpdate() {
         debounceWorkItem?.cancel()
-        let work = DispatchWorkItem { [visibleIds, images] in
-            let visible = images.filter { visibleIds.contains($0.id) }
-            vm.triggerEstimationForVisible(visible)
+        let work = DispatchWorkItem { [visibleIds] in
+            vm.updateVisibleAssets(visibleIds)
         }
         debounceWorkItem = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
@@ -37,13 +36,12 @@ struct ImagesGridView: View {
                     }
                     .onAppear {
                         visibleIds.insert(asset.id)
-                        scheduleEstimation()
-                        // Trigger animation with slight delay for stagger effect
+                        scheduleVisibilityUpdate()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
                             appearedIds.insert(asset.id)
                         }
                     }
-                    .onDisappear { visibleIds.remove(asset.id); scheduleEstimation() }
+                    .onDisappear { visibleIds.remove(asset.id); scheduleVisibilityUpdate() }
                 }
             }
             .padding(10)

@@ -21,11 +21,10 @@ struct ImageChangeInfo {
     init(asset: ImageAsset, vm: ImageToolsViewModel) {
         let preview = vm.previewInfo(for: asset)
         
-        // Store original and target values
         self.originalPixelSize = asset.originalPixelSize
         self.targetPixelSize = preview.targetPixelSize
         self.originalFileSize = asset.originalFileSizeBytes
-        self.estimatedOutputSize = vm.estimatedBytes[asset.id] ?? preview.estimatedOutputBytes
+        self.estimatedOutputSize = vm.estimatedByteCount(for: asset.id)
         self.originalFormat = ImageExporter.inferFormat(from: asset.originalURL)
         self.targetFormat = vm.selectedFormat ?? originalFormat
         
@@ -77,13 +76,6 @@ struct ImageItem: View {
         .contentShape(Rectangle())
         .onHover(perform: handleHover)
         .animation(.easeInOut(duration: 0.15), value: isHovering)
-        .onChange(of: vm.resizeMode) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.resizeWidth) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.resizeHeight) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.resizeLongEdge) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.selectedFormat) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.compressionPercent) { vm.triggerEstimationForVisible([asset]) }
-        .onChange(of: vm.removeMetadata) { vm.triggerEstimationForVisible([asset]) }
         .overlay { hoverBorder }
         .onDisappear { removeKeyMonitor() }
     }
@@ -91,6 +83,17 @@ struct ImageItem: View {
 
 // MARK: View Components
 private extension ImageItem {
+    var isActiveComparison: Bool {
+        vm.comparisonSelection?.assetID == asset.id
+    }
+    
+    /// Only the currently-compared grid item (or all items when no comparison is active)
+    /// should participate in the hero geometry group. Other items use `properties: []`
+    /// so they don't produce stale matches during rapid navigation.
+    var heroProperties: MatchedGeometryProperties {
+        vm.comparisonSelection == nil || isActiveComparison ? .frame : []
+    }
+    
     @ViewBuilder
     var thumbnailLayer: some View {
         ZStack {
@@ -101,15 +104,23 @@ private extension ImageItem {
                     .fill(.quaternary)
             }
         }
-        .matchedGeometryEffect(id: "hero-\(asset.id)", in: heroNamespace)
-        .opacity(vm.comparisonSelection?.assetID == asset.id ? 0 : 1)
+        .matchedGeometryEffect(
+            id: "hero-\(asset.id)",
+            in: heroNamespace,
+            properties: heroProperties,
+        )
+        .opacity(isActiveComparison ? 0 : 1)
     }
     
     var fileNameOverlay: some View {
         ZStack(alignment: .topLeading) {
             Color.clear
             SingleLineOverlayBadge(text: fileName)
-                .matchedGeometryEffect(id: "filename-\(asset.id)", in: heroNamespace)
+                .matchedGeometryEffect(
+                    id: "filename-\(asset.id)",
+                    in: heroNamespace,
+                    properties: heroProperties,
+                )
                 .padding(8)
         }
     }
@@ -117,7 +128,7 @@ private extension ImageItem {
     var hoverControlsOverlay: some View {
         ZStack(alignment: .topTrailing) {
             Color.clear
-            HoverControls(asset: asset, vm: vm, isVisible: isHovering)
+            HoverControls(asset: asset, isVisible: isHovering)
         }
     }
     
