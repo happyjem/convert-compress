@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct AppCommands: Commands {
-    @AppStorage(PreferencesStore.revealExportInFinder) private var revealExportInFinder = true
-    @AppStorage(PreferencesStore.keepFolderStructure) private var keepFolderStructure = false
+    @AppStorage(StorageKeys.Preferences.revealExportInFinder) private var revealExportInFinder = true
+    @AppStorage(StorageKeys.Preferences.keepFolderStructure) private var keepFolderStructure = false
     
     var body: some Commands {
         CommandGroup(after: .appSettings) {

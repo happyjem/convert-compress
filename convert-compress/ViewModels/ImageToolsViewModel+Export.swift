@@ -4,7 +4,7 @@ import AppKit
 
 extension ImageToolsViewModel {
     func buildPipeline() -> ProcessingPipeline {
-        let keepStructure = UserDefaults.standard.bool(forKey: PreferencesStore.keepFolderStructure)
+        let keepStructure = UserDefaults.standard.bool(forKey: StorageKeys.Preferences.keepFolderStructure)
         return PipelineBuilder().build(
             configuration: currentConfiguration,
             exportDirectory: exportDirectory,
@@ -12,12 +12,10 @@ extension ImageToolsViewModel {
         )
     }
 
-
-    // Async concurrent export
+    /// Recommended concurrency for export, balancing CPU / memory / thermal state.
     func recommendedConcurrency() -> Int {
         let info = ProcessInfo.processInfo
         var concurrency = min(16, max(4, info.activeProcessorCount * 2))
-        // Adjust for physical memory bands (rough heuristic)
         let gb = Double(info.physicalMemory) / (1024.0 * 1024.0 * 1024.0)
         if gb < 4.0 { concurrency = min(concurrency, 4) }
         else if gb < 8.0 { concurrency = min(concurrency, 8) }
@@ -38,7 +36,7 @@ extension ImageToolsViewModel {
             self?.executeExport()
         }
     }
-    
+
     private func executeExport() {
         let pipeline = buildPipeline()
         if let fmt = selectedFormat { bumpRecentFormats(fmt) }
@@ -86,6 +84,7 @@ extension ImageToolsViewModel {
                             let updated = try pipeline.run(on: asset, preEncoded: preEncoded)
                             return (asset, updated)
                         } catch {
+                            AppLogger.export.error("Pipeline run failed for \(asset.originalURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
                             return nil
                         }
                     }
@@ -131,13 +130,12 @@ extension ImageToolsViewModel {
         isExporting = false
         exportCompleted = 0
         exportTotal = 0
-        
-        // Track usage and check for rating prompt
+
         let processedCount = imagesToCommit.filter { $0.isEdited }.count
         UsageTracker.shared.recordPipelineApplied(imageCount: processedCount)
         RatingCoordinator.shared.checkAndShowIfNeeded()
 
-        if UserDefaults.standard.object(forKey: PreferencesStore.revealExportInFinder) as? Bool ?? true {
+        if UserDefaults.standard.object(forKey: StorageKeys.Preferences.revealExportInFinder) as? Bool ?? true {
             let urlsToReveal = imagesToCommit.compactMap { $0.isEdited ? $0.workingURL : nil }
             if !urlsToReveal.isEmpty {
                 NSWorkspace.shared.activateFileViewerSelecting(urlsToReveal)
@@ -153,13 +151,11 @@ extension ImageToolsViewModel {
     private func preflightReplaceIfNecessary(pipeline: ProcessingPipeline, targets: [ImageAsset]) -> Bool {
         guard !targets.isEmpty else { return true }
         let planned: [URL] = targets.map { pipeline.plannedDestinationURL(for: $0) }
-        // Only unique destinations matter for conflict check
         let uniquePlanned = Array(Set(planned))
         let fm = FileManager.default
         let conflicts = uniquePlanned.filter { fm.fileExists(atPath: $0.path) }
         guard !conflicts.isEmpty else { return true }
 
-        // Prefer showing the parent folder if all in same directory
         let parentDirs = Set(conflicts.map { $0.deletingLastPathComponent().path })
         let folderHintPath = parentDirs.count == 1 ? parentDirs.first! : nil
         let message = String(localized: "Replace existing files?")
@@ -223,5 +219,3 @@ extension ImageToolsViewModel {
         alert.runModal()
     }
 }
-
-

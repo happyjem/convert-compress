@@ -2,7 +2,6 @@ import Foundation
 import AppKit
 import CoreImage
 import UniformTypeIdentifiers
-import OSLog
 
 // MARK: - Protocol
 
@@ -20,7 +19,6 @@ enum VectorImageError: Error {
 }
 
 enum VectorImageSupport {
-    private static let logger = Logger(subsystem: AppConstants.bundleIdentifier, category: "VectorImageSupport")
     private static let minLongEdge: CGFloat = 1024
     private static let maxLongEdge: CGFloat = 3840
     private static let upscaleFactor: CGFloat = 4
@@ -66,7 +64,7 @@ enum VectorImageSupport {
     /// Loads a vector image and returns a CIImage rasterized at `targetSize` pixels.
     static func loadAsCIImage(from url: URL, targetSize: CGSize) throws -> CIImage {
         let nsImage = try loadNSImage(from: url)
-        logger.debug("Loading vector as CIImage: \(url.lastPathComponent, privacy: .public) at \(Int(targetSize.width))×\(Int(targetSize.height))")
+        AppLogger.processing.debug("Loading vector as CIImage: \(url.lastPathComponent, privacy: .public) at \(Int(targetSize.width))×\(Int(targetSize.height))")
         return CIImage(cgImage: try rasterize(nsImage: nsImage, at: targetSize))
     }
 
@@ -96,7 +94,7 @@ enum VectorImageSupport {
 
     private static func loadNSImage(from url: URL) throws -> NSImage {
         guard let nsImage = NSImage(contentsOf: url) else {
-            logger.error("NSImage failed to load: \(url.lastPathComponent, privacy: .public)")
+            AppLogger.processing.error("NSImage failed to load: \(url.lastPathComponent, privacy: .public)")
             throw VectorImageError.rasterizationFailed
         }
         return nsImage

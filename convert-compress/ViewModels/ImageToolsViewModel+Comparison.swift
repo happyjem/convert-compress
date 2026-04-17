@@ -2,34 +2,6 @@ import Foundation
 import AppKit
 import Combine
 
-// MARK: - Comparison State Models
-
-struct ComparisonSelection: Equatable {
-    let assetID: UUID
-}
-
-struct ComparisonPreviewState {
-    var originalImage: NSImage?
-    var processedImage: NSImage?
-    var isLoading: Bool
-    var errorMessage: String?
-    var cropRegion: CGRect?
-    var originalSize: CGSize?
-    var processedSize: CGSize?
-
-    static let empty = ComparisonPreviewState(
-        originalImage: nil,
-        processedImage: nil,
-        isLoading: false,
-        errorMessage: nil,
-        cropRegion: nil,
-        originalSize: nil,
-        processedSize: nil
-    )
-}
-
-// MARK: - Comparison Logic
-
 extension ImageToolsViewModel {
     // Setup comparison state observation
     func setupComparisonObservation() {
@@ -49,7 +21,7 @@ extension ImageToolsViewModel {
                     self.comparisonPreview = .empty
                     self.comparisonPreviewTask?.cancel()
                     self.comparisonPreviewTask = nil
-                    self.liveRenderDebounceWorkItem?.cancel()
+                    self.liveRenderDebouncer.cancel()
                 }
                 // Note: Don't trigger refresh here - let ComparisonView do it after animation
             }
@@ -126,12 +98,9 @@ extension ImageToolsViewModel {
     
     func scheduleComparisonPreviewRefresh() {
         guard comparisonSelection != nil else { return }
-        liveRenderDebounceWorkItem?.cancel()
-        let work = DispatchWorkItem { [weak self] in
+        liveRenderDebouncer.schedule(after: .milliseconds(250)) { [weak self] in
             self?.refreshComparisonPreview()
         }
-        liveRenderDebounceWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: work)
     }
     
     // MARK: - Private

@@ -7,16 +7,13 @@ struct ImagesGridView: View {
     let columns: [GridItem]
     let heroNamespace: Namespace.ID
     @State private var visibleIds: Set<UUID> = []
-    @State private var debounceWorkItem: DispatchWorkItem? = nil
+    @State private var visibilityDebouncer = Debouncer()
     @State private var appearedIds: Set<UUID> = []
-    
+
     private func scheduleVisibilityUpdate() {
-        debounceWorkItem?.cancel()
-        let work = DispatchWorkItem { [visibleIds] in
+        visibilityDebouncer.schedule(after: .milliseconds(150)) { [visibleIds] in
             vm.updateVisibleAssets(visibleIds)
         }
-        debounceWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
     }
     
     var body: some View {

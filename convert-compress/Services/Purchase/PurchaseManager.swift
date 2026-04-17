@@ -58,7 +58,7 @@ final class PurchaseManager {
             lifetimeRegularDisplayPrice = lifetimeRegularProduct?.displayPrice
             
         } catch {
-            print("Failed to load products: \(error)")
+            AppLogger.purchase.error("Failed to load products: \(error.localizedDescription, privacy: .public)")
         }
     }
     
@@ -132,14 +132,14 @@ final class PurchaseManager {
                 await transaction.finish()
                 
             case .userCancelled:
-                print("User cancelled purchase")
+                AppLogger.purchase.debug("User cancelled purchase")
             case .pending:
-                print("Purchase Pending")
+                AppLogger.purchase.debug("Purchase pending")
             @unknown default:
                 break
             }
         } catch {
-            print("Purchase failed: \(error)")
+            AppLogger.purchase.error("Purchase failed: \(error.localizedDescription, privacy: .public)")
             purchaseError = "Purchase failed. Please try again."
         }
     }
@@ -158,7 +158,7 @@ final class PurchaseManager {
             try await AppStore.sync()
             await checkEntitlements()
         } catch {
-            print("Restore failed: \(error)")
+            AppLogger.purchase.error("Restore failed: \(error.localizedDescription, privacy: .public)")
             purchaseError = "Restore failed. Please try again."
         }
     }

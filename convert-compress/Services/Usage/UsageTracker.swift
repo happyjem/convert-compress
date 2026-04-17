@@ -5,7 +5,7 @@ final class UsageTracker: ObservableObject {
     
     @Published private(set) var events: [UsageEventModel] = []
     
-    private static let key = "image_tools.usage_events.v1"
+    private static let key = StorageKeys.Usage.events
     
     private init() {
         load()

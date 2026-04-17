@@ -9,7 +9,7 @@ struct ThumbnailGenerator {
     }
 
     static func load(for url: URL, scale: CGFloat, maxPixelSize: CGFloat = 256) async -> Output {
-        ImageToolsViewModel.ingestionLogger.debug("Loading thumbnail: \(url.lastPathComponent, privacy: .public)")
+        AppLogger.ingestion.debug("Loading thumbnail: \(url.lastPathComponent, privacy: .public)")
         
         let standardizedURL = url.standardizedFileURL
         let pixelMax = max(1, Int(maxPixelSize * scale))

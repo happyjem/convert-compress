@@ -4,6 +4,20 @@ import UniformTypeIdentifiers
 
 extension ImageToolsViewModel {
 
+    // MARK: - Preview
+
+    func previewInfo(for asset: ImageAsset) -> PreviewInfo {
+        PreviewEstimator.estimate(
+            for: asset,
+            resizeMode: resizeMode,
+            resizeWidth: resizeWidth,
+            resizeHeight: resizeHeight,
+            resizeLongEdge: resizeLongEdge,
+            compressionPercent: compressionPercent,
+            selectedFormat: selectedFormat
+        )
+    }
+
     // MARK: - Cache Accessors
 
     func estimatedByteCount(for assetID: UUID) -> Int? {
@@ -30,12 +44,9 @@ extension ImageToolsViewModel {
     }
 
     func scheduleProcessing() {
-        processingDebounceWorkItem?.cancel()
-        let work = DispatchWorkItem { [weak self] in
+        processingDebouncer.schedule(after: .milliseconds(150)) { [weak self] in
             self?.runProcessing()
         }
-        processingDebounceWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
     }
 
     /// Re-processes visible assets when the configuration has changed.

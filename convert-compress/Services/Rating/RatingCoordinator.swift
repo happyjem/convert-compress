@@ -10,8 +10,8 @@ final class RatingCoordinator {
     var isPresented = false
     var showSecondPrompt = false
     
-    private static let hasShownKey = "image_tools.rating.has_shown"
-    private static let declinedKey = "image_tools.rating.declined"
+    private static let hasShownKey = StorageKeys.Rating.hasShown
+    private static let declinedKey = StorageKeys.Rating.declined
     
     private init() {}
     
