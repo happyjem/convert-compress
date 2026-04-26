@@ -18,14 +18,21 @@ convert-compress/
 │   ├── Logging/      # Central AppLogger namespace
 │   └── Models/       # Value-type domain models (structs/enums only)
 ├── Processing/       # Image pipeline (CIImage-based)
-│   └── Encoder/      # CustomImageEncoder implementations
+│   ├── Encoder/      # CustomImageEncoder implementations
+│   ├── Metadata/     # Image metadata readers/helpers
+│   ├── Sizing/       # Resize/crop/preview sizing math
+│   └── Types/        # Processing-related type extensions
 ├── Services/         # Singletons & stateful coordinators (one folder per service)
 ├── Shaders/          # Metal shaders
 ├── StoreKit/         # StoreKit configuration
 ├── Theme/
 │   ├── Components/   # Reusable view components, grouped by category
 │   └── Utils/        # Theme-related helpers
-├── Utils/            # Stateless, reusable, non-UI helpers
+├── Utils/            # Stateless, reusable, non-domain helpers grouped by concern
+│   ├── Collections/  # Generic collection/data-structure helpers
+│   ├── Concurrency/  # Generic async/timing helpers
+│   ├── Formatting/   # Generic parsing/formatting helpers
+│   └── SwiftUI/      # Small SwiftUI-only extensions
 ├── ViewModels/       # @MainActor @Observable/ObservableObject VMs; split via extensions
 └── Views/            # SwiftUI views, scoped to features
 ```
@@ -69,8 +76,8 @@ Add new categories to `AppLogger` as the app grows. Categories are short, lower-
 ## Concurrency
 
 - UI state mutations on `@MainActor`. Cross-actor hops: `await MainActor.run { … }`.
-- Use `AsyncSemaphore` (in `Utils/`) for bounded concurrency.
-- Use `Debouncer` (in `Utils/`) for any "wait X ms, then run" patterns. Do not recreate ad-hoc `DispatchWorkItem` debouncing.
+- Use `AsyncSemaphore` (in `Utils/Concurrency/`) for bounded concurrency.
+- Use `Debouncer` (in `Utils/Concurrency/`) for any "wait X ms, then run" patterns. Do not recreate ad-hoc `DispatchWorkItem` debouncing.
 
 ## Error Handling
 

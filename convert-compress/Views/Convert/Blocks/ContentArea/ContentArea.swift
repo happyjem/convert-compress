@@ -37,7 +37,7 @@ struct ContentArea: View {
     private var content: some View {
         ZStack {
             if isEmpty {
-                ImagesListEmptyState(
+                ImagesGridEmptyState(
                     onPaste: { vm.addFromPasteboard() },
                     onPickFromFinder: {
                         IngestionCoordinator.presentOpenPanel { urls in

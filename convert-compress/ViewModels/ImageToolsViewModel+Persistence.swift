@@ -75,10 +75,10 @@ extension ImageToolsViewModel {
             resizeLongEdge = longEdge
         }
 
-        if let selRaw = defaults.string(forKey: Keys.selectedFormat),
-           let fmt = ImageIOCapabilities.shared.format(forIdentifier: selRaw) {
-            if ImageIOCapabilities.shared.supportsWriting(utType: fmt.utType) {
-                selectedFormat = fmt
+        if let selectedFormatIdentifier = defaults.string(forKey: Keys.selectedFormat),
+           let persistedFormat = ImageIOCapabilities.shared.format(forIdentifier: selectedFormatIdentifier) {
+            if ImageIOCapabilities.shared.supportsWriting(utType: persistedFormat.utType) {
+                selectedFormat = persistedFormat
             }
         }
         if let raw = defaults.array(forKey: Keys.recentFormats) as? [String] {

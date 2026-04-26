@@ -1,102 +1,17 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
-// MARK: - Image Thumbnail
-struct ImageThumbnail: View {
-    let thumbnail: NSImage
-    
-    var body: some View {
-        Image(nsImage: thumbnail)
-            .resizable()
-            .scaledToFit()
-            .mask(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-}
-
-// MARK: - Info Overlay
-struct InfoOverlay: View {
-    let changeInfo: ImageChangeInfo
-    
-    var body: some View {
-        HStack(alignment: .bottom, spacing: 6) {
-            formatBadge
-            resolutionBadge
-            fileSizeBadge
-        }
-        .padding(6)
-        .opacity(changeInfo.hasChanges ? 1 : 0)
-    }
-    
-    @ViewBuilder
-    private var formatBadge: some View {
-        if changeInfo.formatChanged,
-           let original = changeInfo.originalFormat,
-           let target = changeInfo.targetFormat {
-            TwoLineOverlayBadge(
-                topText: original.displayName,
-                bottomText: target.displayName
-            )
-        }
-    }
-    
-    @ViewBuilder
-    private var resolutionBadge: some View {
-        if changeInfo.resolutionChanged,
-           let original = changeInfo.originalPixelSize,
-           let target = changeInfo.targetPixelSize {
-            TwoLineOverlayBadge(
-                topText: formatResolution(original),
-                bottomText: formatResolution(target, padTo: original)
-            )
-        }
-    }
-    
-    @ViewBuilder
-    private var fileSizeBadge: some View {
-        if let originalSize = changeInfo.originalFileSize {
-            TwoLineOverlayBadge(
-                topText: formatBytes(originalSize),
-                bottomText: changeInfo.estimatedOutputSize.map { formatBytes($0) } ?? "--- KB",
-                alignment: .trailing
-            )
-        }
-    }
-    
-    private func formatResolution(_ size: CGSize, padTo reference: CGSize? = nil) -> String {
-        let width = Int(size.width)
-        let height = Int(size.height)
-        
-        guard let ref = reference else {
-            return "\(width)×\(height)"
-        }
-        
-        let refWidth = String(Int(ref.width))
-        let refHeight = String(Int(ref.height))
-        let widthStr = String(width)
-        let heightStr = String(height)
-        
-        let padW = max(0, refWidth.count - widthStr.count)
-        let padH = max(0, refHeight.count - heightStr.count)
-        
-        let paddedW = String(repeating: " ", count: padW) + widthStr
-        let paddedH = String(repeating: " ", count: padH) + heightStr
-        
-        return "\(paddedW)×\(paddedH)"
-    }
-}
-
-// MARK: - Hover Controls
 struct HoverControls: View {
     let asset: ImageAsset
     let isVisible: Bool
-    
+
     @EnvironmentObject private var vm: ImageToolsViewModel
     @State private var copyState: CopyState = .idle
-    
+
     private enum CopyState {
         case idle, loading, success, error
     }
-    
+
     var body: some View {
         HStack(spacing: 10) {
             revealButton
@@ -111,7 +26,7 @@ struct HoverControls: View {
         .frame(maxWidth: .infinity, alignment: .bottomTrailing)
         .opacity(isVisible ? 1 : 0)
     }
-    
+
     private var revealButton: some View {
         Button(action: { NSWorkspace.shared.activateFileViewerSelecting([asset.workingURL]) }) {
             Image(systemName: "folder.fill")
@@ -119,7 +34,7 @@ struct HoverControls: View {
         .buttonStyle(.plain)
         .help(String(localized: "Reveal in Finder"))
     }
-    
+
     private var copyButton: some View {
         Button(action: copyToClipboard) {
             ZStack {
@@ -141,7 +56,7 @@ struct HoverControls: View {
         .disabled(copyState == .loading)
         .help(String(localized: "Copy image to clipboard"))
     }
-    
+
     private var copyIconColor: Color {
         switch copyState {
         case .idle, .loading: .secondary
@@ -149,7 +64,7 @@ struct HoverControls: View {
         case .error: .red
         }
     }
-    
+
     private var copyIconName: String {
         switch copyState {
         case .idle, .loading: "doc.on.doc.fill"
@@ -157,7 +72,7 @@ struct HoverControls: View {
         case .error: "exclamationmark.triangle.fill"
         }
     }
-    
+
     private var removeButton: some View {
         Button(role: .destructive, action: { vm.remove(asset) }) {
             Image(systemName: "xmark.circle.fill")
@@ -165,15 +80,15 @@ struct HoverControls: View {
         .buttonStyle(.plain)
         .help(String(localized: "Remove from list"))
     }
-    
+
     private func copyToClipboard() {
         copyState = .loading
-        
+
         let cached = vm.cachedProcessedData(for: asset.id)
         let preEncoded = cached.map { (data: $0.data, uti: $0.uti) }
         let pipeline = vm.buildPipeline()
         let localAsset = asset
-        
+
         Task.detached {
             let success: Bool
             do {
@@ -183,11 +98,10 @@ struct HoverControls: View {
             } catch {
                 success = false
             }
-            
+
             await MainActor.run { copyState = success ? .success : .error }
             try? await Task.sleep(for: .seconds(1))
             await MainActor.run { copyState = .idle }
         }
     }
 }
-

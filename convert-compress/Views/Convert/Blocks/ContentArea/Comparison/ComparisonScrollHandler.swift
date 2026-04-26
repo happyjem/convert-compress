@@ -6,7 +6,7 @@ struct ComparisonScrollHandler: ViewModifier {
     let zoomPanState: ZoomPanState
     let isEnabled: Bool
     
-    @State private var scrollMonitor: Any?
+    @State private var scrollMonitor: LocalEventMonitor?
     
     func body(content: Content) -> some View {
         content
@@ -20,7 +20,7 @@ struct ComparisonScrollHandler: ViewModifier {
     
     private func installScrollMonitor() {
         removeScrollMonitor()
-        scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [zoomPanState] event in
+        scrollMonitor = LocalEventMonitor(mask: .scrollWheel) { [zoomPanState] event in
             // Trackpad has phase, mouse wheel doesn't
             let isTrackpad = event.phase != .init(rawValue: 0) || event.momentumPhase != .init(rawValue: 0)
             
@@ -45,13 +45,12 @@ struct ComparisonScrollHandler: ViewModifier {
             
             return event
         }
+        scrollMonitor?.start()
     }
     
     private func removeScrollMonitor() {
-        if let monitor = scrollMonitor {
-            NSEvent.removeMonitor(monitor)
-            scrollMonitor = nil
-        }
+        scrollMonitor?.stop()
+        scrollMonitor = nil
     }
 }
 

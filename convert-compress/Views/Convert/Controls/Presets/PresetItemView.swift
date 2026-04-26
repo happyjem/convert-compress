@@ -1,15 +1,33 @@
 import SwiftUI
 
 /// Reusable preset item view that supports display and edit modes
-struct PresetItemView: View {
+struct PresetItemView<TrailingButtons: View>: View {
     let configuration: ProcessingConfiguration
     @Binding var name: String
     let isEditing: Bool
     let backgroundColor: Color
-    let trailingButtons: () -> AnyView
+    let trailingButtons: () -> TrailingButtons
     
     @FocusState.Binding var isFocused: Bool
     let onSubmit: () -> Void
+
+    init(
+        configuration: ProcessingConfiguration,
+        name: Binding<String>,
+        isEditing: Bool,
+        backgroundColor: Color,
+        @ViewBuilder trailingButtons: @escaping () -> TrailingButtons,
+        isFocused: FocusState<Bool>.Binding,
+        onSubmit: @escaping () -> Void
+    ) {
+        self.configuration = configuration
+        self._name = name
+        self.isEditing = isEditing
+        self.backgroundColor = backgroundColor
+        self.trailingButtons = trailingButtons
+        self._isFocused = isFocused
+        self.onSubmit = onSubmit
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {

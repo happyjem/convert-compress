@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-struct ResizeCropView: View {
+struct ResizeCropControl: View {
     @EnvironmentObject private var vm: ImageToolsViewModel
     
     var body: some View {
@@ -33,7 +33,7 @@ struct ResizeCropView: View {
     /// Parses dimension strings like "680x340", "680 x 340", "680X340", "680 340", "680/340", etc.
     /// If a valid pattern is found, automatically populates both width and height fields.
     private func parseDimensionsIfNeeded(from text: String) {
-        guard let dimensions = parseDimensions(from: text) else {
+        guard let dimensions = DimensionParser.parse(text) else {
             return
         }
         

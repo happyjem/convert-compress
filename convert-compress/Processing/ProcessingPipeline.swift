@@ -10,8 +10,8 @@ struct ProcessingPipeline {
     var finalFormat: ImageFormat? = nil
     var compressionPercent: Double? = nil
 
-    mutating func add(_ op: ImageOperation) {
-        operations.append(op)
+    mutating func add(_ operation: ImageOperation) {
+        operations.append(operation)
     }
 
     /// Process an asset and write it to its destination.
@@ -26,7 +26,7 @@ struct ProcessingPipeline {
         defer { sourceToken.stop() }
 
         let encoded = try preEncoded ?? processAndEncode(from: currentURL)
-        let plan = destinationPlan(for: asset, uti: encoded.uti)
+        let plan = destinationResolver.destinationPlan(for: asset, uti: encoded.uti)
 
         let destParent = plan.directory
         if !FileManager.default.fileExists(atPath: destParent.path) {
@@ -76,16 +76,16 @@ struct ProcessingPipeline {
         }
         defer { token.stop() }
 
-        var ci = try loadCIImage(from: originalURL, operations: operations)
-        for op in operations {
-            ci = try op.transformed(ci)
+        var image = try loadCIImage(from: originalURL, operations: operations)
+        for operation in operations {
+            image = try operation.transformed(image)
         }
         let chosenFormat = finalFormat ?? ImageExporter.inferFormat(from: originalURL)
-        let q = compressionPercent.map { max(min($0, 1.0), 0.01) }
-        let encoded = try ImageExporter.encodeToData(ciImage: ci,
+        let quality = compressionPercent.map { max(min($0, 1.0), 0.01) }
+        let encoded = try ImageExporter.encodeToData(ciImage: image,
                                                      originalURL: originalURL,
                                                      format: chosenFormat,
-                                                     compressionQuality: q,
+                                                     compressionQuality: quality,
                                                      stripMetadata: removeMetadata)
         return encoded
     }
@@ -95,53 +95,16 @@ struct ProcessingPipeline {
         let currentURL = asset.originalURL
         let chosenFormat = finalFormat ?? ImageExporter.inferFormat(from: currentURL)
         let finalUTI = ImageExporter.decideUTTypeForExport(originalURL: currentURL, requestedFormat: chosenFormat)
-        let plan = destinationPlan(for: asset, uti: finalUTI)
+        let plan = destinationResolver.destinationPlan(for: asset, uti: finalUTI)
         return plan.url
     }
-} 
+}
 
 private extension ProcessingPipeline {
-    struct DestinationPlan {
-        let url: URL
-        let directory: URL
-        let filenameStem: String
-        let fileExtension: String
-    }
-
-    func destinationPlan(for asset: ImageAsset, uti: UTType) -> DestinationPlan {
-        let currentURL = asset.originalURL
-        let ext = ImageIOCapabilities.shared.preferredFilenameExtension(for: uti)
-        let tempDirPath = FileManager.default.temporaryDirectory.standardizedFileURL.path
-        let isTempSource = currentURL.standardizedFileURL.path.hasPrefix(tempDirPath)
-
-        let destinationURL: URL
-        if let exportDir = exportDirectory {
-            let base = currentURL.deletingPathExtension().lastPathComponent
-            if let root = folderStructureRoot {
-                let assetDir = currentURL.deletingLastPathComponent().standardizedFileURL
-                let sourcePath = root.standardizedFileURL.path
-                let assetPath = assetDir.path
-                let relative = assetPath.hasPrefix(sourcePath)
-                    ? String(assetPath.dropFirst(sourcePath.count))
-                        .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                    : ""
-                let targetDir = relative.isEmpty ? exportDir : exportDir.appendingPathComponent(relative)
-                destinationURL = targetDir.appendingPathComponent(base + "." + ext)
-            } else {
-                destinationURL = exportDir.appendingPathComponent(base + "." + ext)
-            }
-        } else if isTempSource {
-            let downloadsDir = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? FileManager.default.homeDirectoryForCurrentUser
-            let base = currentURL.deletingPathExtension().lastPathComponent
-            destinationURL = downloadsDir.appendingPathComponent(base + "." + ext)
-        } else {
-            let dir = currentURL.deletingLastPathComponent()
-            let base = currentURL.deletingPathExtension().lastPathComponent
-            destinationURL = dir.appendingPathComponent(base + "." + ext)
-        }
-
-        let directory = destinationURL.deletingLastPathComponent()
-        let stem = destinationURL.deletingPathExtension().lastPathComponent
-        return DestinationPlan(url: destinationURL, directory: directory, filenameStem: stem, fileExtension: ext)
+    var destinationResolver: ExportDestinationResolver {
+        ExportDestinationResolver(
+            exportDirectory: exportDirectory,
+            folderStructureRoot: folderStructureRoot
+        )
     }
 }

@@ -9,31 +9,18 @@ extension ImageToolsViewModel {
     func previewInfo(for asset: ImageAsset) -> PreviewInfo {
         PreviewEstimator.estimate(
             for: asset,
-            resizeMode: resizeMode,
-            resizeWidth: resizeWidth,
-            resizeHeight: resizeHeight,
-            resizeLongEdge: resizeLongEdge,
-            compressionPercent: compressionPercent,
-            selectedFormat: selectedFormat
+            configuration: currentConfiguration
         )
     }
 
     // MARK: - Cache Accessors
 
     func estimatedByteCount(for assetID: UUID) -> Int? {
-        guard let cached = processedCache[assetID],
-              cached.configuration == currentConfiguration else {
-            return nil
-        }
-        return cached.data.count
+        processedCache.freshEntry(for: assetID, configuration: currentConfiguration)?.data.count
     }
 
     func cachedProcessedData(for assetID: UUID) -> ProcessedImageData? {
-        guard let cached = processedCache[assetID],
-              cached.configuration == currentConfiguration else {
-            return nil
-        }
-        return cached
+        processedCache.freshEntry(for: assetID, configuration: currentConfiguration)
     }
 
     // MARK: - Background Processing
@@ -51,17 +38,9 @@ extension ImageToolsViewModel {
 
     /// Re-processes visible assets when the configuration has changed.
     func setupProcessingCacheObservation() {
-        var lastConfig = currentConfiguration
-        objectWillChange
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                let config = self.currentConfiguration
-                guard config != lastConfig else { return }
-                lastConfig = config
-                self.scheduleProcessing()
-            }
-            .store(in: &cancellables)
+        observeConfigurationChanges { [weak self] in
+            self?.scheduleProcessing()
+        }
     }
 
     // MARK: - Private
@@ -81,7 +60,7 @@ extension ImageToolsViewModel {
                 configuration: config
             )
             guard !Task.isCancelled else { return }
-            self.processedCache.merge(results) { _, new in new }
+            self.processedCache.merge(results)
         }
     }
 }

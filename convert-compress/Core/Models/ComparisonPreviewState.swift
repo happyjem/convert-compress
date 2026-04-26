@@ -1,9 +1,5 @@
-import Foundation
 import AppKit
-
-struct ComparisonSelection: Equatable {
-    let assetID: UUID
-}
+import Foundation
 
 struct ComparisonPreviewState {
     var originalImage: NSImage?

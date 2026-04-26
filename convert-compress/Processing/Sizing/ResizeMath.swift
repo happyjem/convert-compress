@@ -1,12 +1,6 @@
 import Foundation
 import CoreGraphics
 
-enum ResizeInput {
-    case percent(Double)
-    case pixels(width: Int?, height: Int?)
-    case longEdge(Int)
-}
-
 struct ResizeMath {
     static func targetSize(for original: CGSize, input: ResizeInput, noUpscale: Bool) -> CGSize {
         guard original.width > 0, original.height > 0 else { return CGSize(width: 0, height: 0) }
@@ -20,34 +14,34 @@ struct ResizeMath {
             let h = max(1, (original.height * scale).rounded())
             return CGSize(width: w, height: h)
 
-        case .pixels(let wOpt, let hOpt):
-            if let w = wOpt, hOpt == nil {
+        case .pixels(let widthOption, let heightOption):
+            if let width = widthOption, heightOption == nil {
                 let ratio = original.height / original.width
-                let targetW = CGFloat(w)
-                let cappedW = noUpscale ? min(targetW, original.width) : targetW
-                let h = max(1, (cappedW * ratio).rounded())
-                let finalW = max(1, cappedW.rounded())
-                return CGSize(width: finalW, height: h)
-            } else if let h = hOpt, wOpt == nil {
+                let targetWidth = CGFloat(width)
+                let cappedWidth = noUpscale ? min(targetWidth, original.width) : targetWidth
+                let height = max(1, (cappedWidth * ratio).rounded())
+                let finalWidth = max(1, cappedWidth.rounded())
+                return CGSize(width: finalWidth, height: height)
+            } else if let height = heightOption, widthOption == nil {
                 let ratio = original.width / original.height
-                let targetH = CGFloat(h)
-                let cappedH = noUpscale ? min(targetH, original.height) : targetH
-                let w = max(1, (cappedH * ratio).rounded())
-                let finalH = max(1, cappedH.rounded())
-                return CGSize(width: w, height: finalH)
+                let targetHeight = CGFloat(height)
+                let cappedHeight = noUpscale ? min(targetHeight, original.height) : targetHeight
+                let width = max(1, (cappedHeight * ratio).rounded())
+                let finalHeight = max(1, cappedHeight.rounded())
+                return CGSize(width: width, height: finalHeight)
             } else {
-                var w = CGFloat(wOpt ?? Int(original.width))
-                var h = CGFloat(hOpt ?? Int(original.height))
+                var width = CGFloat(widthOption ?? Int(original.width))
+                var height = CGFloat(heightOption ?? Int(original.height))
                 if noUpscale {
-                    w = min(w, original.width)
-                    h = min(h, original.height)
+                    width = min(width, original.width)
+                    height = min(height, original.height)
                 }
-                return CGSize(width: max(1, w.rounded()), height: max(1, h.rounded()))
+                return CGSize(width: max(1, width.rounded()), height: max(1, height.rounded()))
             }
             
-        case .longEdge(let targetlongEdge):
+        case .longEdge(let targetLongEdge):
             let isWidthLonger = original.width >= original.height
-            let targetSize = CGFloat(targetlongEdge)
+            let targetSize = CGFloat(targetLongEdge)
             let cappedTarget = noUpscale ? min(targetSize, max(original.width, original.height)) : targetSize
             
             if isWidthLonger {

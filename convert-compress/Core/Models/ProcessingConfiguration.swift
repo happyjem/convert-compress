@@ -11,4 +11,13 @@ struct ProcessingConfiguration: Codable, Equatable {
     let flipV: Bool
     let removeMetadata: Bool
     let removeBackground: Bool
+
+    var resizeSpecification: ResizeSpecification {
+        ResizeSpecification(
+            mode: resizeMode,
+            widthText: resizeWidth,
+            heightText: resizeHeight,
+            longEdgeText: resizeLongEdge
+        )
+    }
 }

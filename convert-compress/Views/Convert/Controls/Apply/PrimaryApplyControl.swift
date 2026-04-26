@@ -5,80 +5,39 @@ struct PrimaryApplyControl: View {
     @State private var showDoneText: Bool = false
     
     var body: some View {
-        // vm states (we could construct the state with an enum like PrimaryApplyControlState: disabled, progressing, active, done)
-        let isDisabled: Bool = vm.images.isEmpty
-        let isInProgress: Bool = vm.isExporting
-        let progress: Double = vm.exportFraction
-        let counterText: String? = vm.isExporting ? "\(vm.exportCompleted)/\(vm.exportTotal)" : nil
-        let ingestText: String? = vm.ingestCounterText
-        let ingestProgress: Double = vm.ingestFraction
-        
+        let controlState = PrimaryApplyControlState(viewModel: vm, showDoneText: showDoneText)
+        let isInProgress = vm.isExporting
         let height: CGFloat = 40
         let progressWidth: CGFloat = 200
-        let label: String = {
-            if let ingestText {
-                return ingestText
-            }
-            if isInProgress {
-                return counterText ?? String(localized: "Save")
-            }
-            if showDoneText {
-                return String(localized: "Done")
-            }
-            return String(localized: "Save")
-        }()
-        let iconName: String = {
-            if ingestText != nil {
-                return "arrow.down.app.dashed"
-            }
-            if isInProgress {
-                return "hourglass"
-            }
-            if showDoneText {
-                return "checkmark.rectangle.stack.fill"
-            }
-            return "photo.stack.fill"
-        }()
-        let isCounting = ingestText != nil || isInProgress
-        let textTransition: ContentTransition = isCounting ? .numericText() : .opacity
-        let displayedProgress: Double = {
-            if let _ = ingestText {
-                return max(min(ingestProgress, 1.0), 0.0)
-            }
-            if isInProgress {
-                return max(min(progress, 1.0), 0.0)
-            }
-            return 1.0
-        }()
         
         Button(role: .none) {
-            guard !isInProgress && ingestText == nil else { return }
+            guard controlState.allowsAction else { return }
             vm.applyPipelineAsync()
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: iconName)
+                Image(systemName: controlState.iconName)
                     .contentTransition(.symbolEffect(.replace))
-                Text(label)
-                    .contentTransition(textTransition)
+                Text(controlState.label)
+                    .contentTransition(controlState.isCounting ? .numericText() : .opacity)
                     .transition(.opacity)
                     .monospacedDigit()
             }
             .font(Theme.Fonts.button)
             .foregroundStyle(Color.white)
             .padding(.horizontal, 20)
-            .frame(width: (isInProgress || ingestText != nil) ? progressWidth : nil, height: height)
+            .frame(width: controlState.usesProgressWidth ? progressWidth : nil, height: height)
             .frame(minWidth: height)
             .background {
                 ZStack(alignment: .leading) {
                     // Background
                     Color.secondary.opacity(0.2)
                     
-                    if !isDisabled {
+                    if !controlState.isDisabled {
                         GeometryReader { proxy in
                             Rectangle()
                                 .fill(Color.accentColor)
-                                .frame(width: displayedProgress * proxy.size.width)
-                                .animation(Theme.Animations.spring(), value: displayedProgress)
+                                .frame(width: controlState.displayedProgress * proxy.size.width)
+                                .animation(Theme.Animations.spring(), value: controlState.displayedProgress)
                         }
                     }
                 }
@@ -88,9 +47,9 @@ struct PrimaryApplyControl: View {
         }
         .keyboardShortcut(.defaultAction)
         .buttonStyle(.plain)
-        .shadow(color: Color.accentColor.opacity((isDisabled || isInProgress || ingestText != nil) ? 0 : 0.25), radius: 8, x: 0, y: 2)
-        .disabled(isDisabled || ingestText != nil)
-        .allowsHitTesting(!isInProgress && ingestText == nil)
+        .shadow(color: Color.accentColor.opacity(controlState.showsShadow ? 0.25 : 0), radius: 8, x: 0, y: 2)
+        .disabled(controlState.isDisabled || controlState.isIngesting)
+        .allowsHitTesting(controlState.allowsAction)
         .help(String(localized: "Save images"))
         .onChange(of: isInProgress) { _, isNowInProgress in
             if !isNowInProgress {
@@ -111,7 +70,106 @@ struct PrimaryApplyControl: View {
         }
         .animation(Theme.Animations.spring(), value: isInProgress)
         .animation(Theme.Animations.spring(), value: showDoneText)
-        .animation(Theme.Animations.spring(), value: ingestText)
+        .animation(Theme.Animations.spring(), value: controlState)
+    }
+}
+
+private enum PrimaryApplyControlState: Equatable {
+    case disabled
+    case idle
+    case ingesting(text: String, progress: Double)
+    case exporting(text: String, progress: Double)
+    case done
+
+    @MainActor
+    init(viewModel: ImageToolsViewModel, showDoneText: Bool) {
+        if let ingestText = viewModel.ingestCounterText {
+            self = .ingesting(text: ingestText, progress: viewModel.ingestFraction)
+        } else if viewModel.isExporting {
+            let text = "\(viewModel.exportCompleted)/\(viewModel.exportTotal)"
+            self = .exporting(text: text, progress: viewModel.exportFraction)
+        } else if viewModel.images.isEmpty {
+            self = .disabled
+        } else if showDoneText {
+            self = .done
+        } else {
+            self = .idle
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .disabled, .idle:
+            String(localized: "Save")
+        case .ingesting(let text, _), .exporting(let text, _):
+            text
+        case .done:
+            String(localized: "Done")
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .disabled, .idle:
+            "photo.stack.fill"
+        case .ingesting:
+            "arrow.down.app.dashed"
+        case .exporting:
+            "hourglass"
+        case .done:
+            "checkmark.rectangle.stack.fill"
+        }
+    }
+
+    var displayedProgress: Double {
+        switch self {
+        case .ingesting(_, let progress), .exporting(_, let progress):
+            max(min(progress, 1.0), 0.0)
+        case .disabled:
+            0
+        case .idle, .done:
+            1
+        }
+    }
+
+    var isCounting: Bool {
+        switch self {
+        case .ingesting, .exporting:
+            true
+        case .disabled, .idle, .done:
+            false
+        }
+    }
+
+    var usesProgressWidth: Bool {
+        isCounting
+    }
+
+    var isDisabled: Bool {
+        self == .disabled
+    }
+
+    var isIngesting: Bool {
+        if case .ingesting = self { return true }
+        return false
+    }
+
+    var allowsAction: Bool {
+        switch self {
+        case .idle, .done:
+            true
+        case .disabled, .ingesting, .exporting:
+            false
+        }
+    }
+
+    var showsShadow: Bool {
+        switch self {
+        case .idle, .done:
+            true
+        case .disabled, .ingesting, .exporting:
+            false
+        }
     }
 }
 

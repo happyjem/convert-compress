@@ -20,10 +20,13 @@ final class PurchaseManager {
     private var lifetimeRegularProduct: Product?
     private var transactionUpdateTask: Task<Void, Never>?
     
-    private let lifetimeProductId = "lifetime"
-    private let lifetimeRegularProductId = "lifetime_regular"
+    private enum ProductID: String, CaseIterable {
+        case lifetime = "lifetime"
+        case lifetimeRegular = "lifetime_regular"
+    }
+
     private var proEntitlementProductIds: Set<String> {
-        [lifetimeProductId, lifetimeRegularProductId]
+        Set(ProductID.allCases.map(\.rawValue))
     }
     
     // MARK: - Initialization
@@ -49,10 +52,10 @@ final class PurchaseManager {
     
     func loadProducts() async {
         do {
-            let products = try await Product.products(for: [lifetimeProductId, lifetimeRegularProductId])
+            let products = try await Product.products(for: ProductID.allCases.map(\.rawValue))
             
-            lifetimeProduct = products.first(where: { $0.id == lifetimeProductId })
-            lifetimeRegularProduct = products.first(where: { $0.id == lifetimeRegularProductId })
+            lifetimeProduct = products.first(where: { $0.id == ProductID.lifetime.rawValue })
+            lifetimeRegularProduct = products.first(where: { $0.id == ProductID.lifetimeRegular.rawValue })
             
             lifetimeDisplayPrice = lifetimeProduct?.displayPrice
             lifetimeRegularDisplayPrice = lifetimeRegularProduct?.displayPrice

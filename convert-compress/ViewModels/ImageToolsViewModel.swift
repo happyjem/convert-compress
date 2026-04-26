@@ -61,7 +61,7 @@ final class ImageToolsViewModel: ObservableObject {
     
     /// Cached processed results from estimation. Reused by clipboard,
     /// comparison, and export to avoid redundant processing.
-    @Published var processedCache: [UUID: ProcessedImageData] = [:]
+    @Published var processedCache = ProcessingCache()
     var processingTask: Task<Void, Never>? = nil
     let processingDebouncer = Debouncer()
     
@@ -70,30 +70,46 @@ final class ImageToolsViewModel: ObservableObject {
     
     // MARK: - Export Progress
     
-    @Published var isExporting: Bool = false
-    @Published var exportCompleted: Int = 0
-    @Published var exportTotal: Int = 0
+    @Published var exportProgress = ProgressState()
+
+    var isExporting: Bool {
+        exportProgress.isActive
+    }
+
+    var exportCompleted: Int {
+        exportProgress.completed
+    }
+
+    var exportTotal: Int {
+        exportProgress.total
+    }
     
     var exportFraction: Double {
-        guard isExporting, exportTotal > 0 else { return 0 }
-        return Double(exportCompleted) / Double(exportTotal)
+        exportProgress.fraction
     }
     
     // MARK: - Ingestion Progress
     
-    @Published var isIngesting: Bool = false
-    @Published var ingestCompleted: Int = 0
-    @Published var ingestTotal: Int = 0
+    @Published var ingestionProgress = ProgressState()
+
+    var isIngesting: Bool {
+        ingestionProgress.isActive
+    }
+
+    var ingestCompleted: Int {
+        ingestionProgress.completed
+    }
+
+    var ingestTotal: Int {
+        ingestionProgress.total
+    }
     
     var ingestFraction: Double {
-        guard isIngesting, ingestTotal > 0 else { return 0 }
-        return Double(ingestCompleted) / Double(ingestTotal)
+        ingestionProgress.fraction
     }
     
     var ingestCounterText: String? {
-        guard isIngesting, ingestTotal > 0 else { return nil }
-        let displayed = min(ingestCompleted + (ingestCompleted < ingestTotal ? 1 : 0), ingestTotal)
-        return String("\(displayed)/\(ingestTotal)")
+        ingestionProgress.ingestCounterText
     }
     
     // MARK: - Subscriptions

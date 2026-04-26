@@ -19,15 +19,13 @@ struct PresetListItem: View {
             isEditing: isEditing,
             backgroundColor: isHovered ? Color.primary.opacity(0.07) : Color.clear,
             trailingButtons: {
-                AnyView(
-                    Group {
-                        if isEditing {
-                            editingButtons
-                        } else if isHovered {
-                            displayButtons
-                        }
+                Group {
+                    if isEditing {
+                        editingButtons
+                    } else if isHovered {
+                        displayButtons
                     }
-                )
+                }
             },
             isFocused: $isTextFieldFocused,
             onSubmit: saveEdit

@@ -14,21 +14,7 @@ extension ImageToolsViewModel {
 
     /// Recommended concurrency for export, balancing CPU / memory / thermal state.
     func recommendedConcurrency() -> Int {
-        let info = ProcessInfo.processInfo
-        var concurrency = min(16, max(4, info.activeProcessorCount * 2))
-        let gb = Double(info.physicalMemory) / (1024.0 * 1024.0 * 1024.0)
-        if gb < 4.0 { concurrency = min(concurrency, 4) }
-        else if gb < 8.0 { concurrency = min(concurrency, 8) }
-        if info.isLowPowerModeEnabled { concurrency = max(4, min(concurrency, 8)) }
-        switch info.thermalState {
-        case .fair:
-            concurrency = min(concurrency, 8)
-        case .serious, .critical:
-            concurrency = min(concurrency, 4)
-        default:
-            break
-        }
-        return max(2, min(concurrency, 16))
+        ExportConcurrencyPolicy.recommended()
     }
 
     func applyPipelineAsync() {
@@ -39,7 +25,7 @@ extension ImageToolsViewModel {
 
     private func executeExport() {
         let pipeline = buildPipeline()
-        if let fmt = selectedFormat { bumpRecentFormats(fmt) }
+        if let selectedFormat { bumpRecentFormats(selectedFormat) }
         let config = currentConfiguration
         let targets = images
         guard !targets.isEmpty else { return }
@@ -49,7 +35,7 @@ extension ImageToolsViewModel {
         }
 
         let directories = uniqueDestinationDirectories(for: targets, pipeline: pipeline)
-        let cacheSnapshot = processedCache
+        let cacheSnapshot = processedCache.snapshot()
 
         Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
@@ -65,46 +51,17 @@ extension ImageToolsViewModel {
 
             self.beginExport(total: targets.count)
 
-            let hint = self.recommendedConcurrency()
-            var updatedImages = self.imagesSnapshot()
-
-            await withTaskGroup(of: (ImageAsset, ImageAsset)?.self) { group in
-                var iterator = targets.makeIterator()
-                let boost = max(1, Int(Double(hint) * 1.5))
-                let limit = min(boost, targets.count)
-
-                func addNextTask(from iterator: inout IndexingIterator<[ImageAsset]>, to group: inout TaskGroup<(ImageAsset, ImageAsset)?>) {
-                    guard let asset = iterator.next() else { return }
-                    group.addTask(priority: .utility) {
-                        do {
-                            let cached = cacheSnapshot[asset.id]
-                            let preEncoded = (cached?.configuration == config)
-                                ? (data: cached!.data, uti: cached!.uti)
-                                : nil
-                            let updated = try pipeline.run(on: asset, preEncoded: preEncoded)
-                            return (asset, updated)
-                        } catch {
-                            AppLogger.export.error("Pipeline run failed for \(asset.originalURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
-                            return nil
-                        }
-                    }
-                }
-
-                for _ in 0..<limit {
-                    addNextTask(from: &iterator, to: &group)
-                }
-
-                while let result = await group.next() {
-                    if let (original, updated) = result,
-                       let idx = updatedImages.firstIndex(of: original) {
-                        updatedImages[idx] = updated
-                    }
-
-                    self.incrementExportProgress()
-
-                    addNextTask(from: &iterator, to: &group)
-                    await Task.yield()
-                }
+            let runner = ExportRunner(
+                pipeline: pipeline,
+                configuration: config,
+                cacheSnapshot: cacheSnapshot,
+                maxConcurrent: self.recommendedConcurrency()
+            )
+            let updatedImages = await runner.run(
+                targets: targets,
+                initialImages: self.imagesSnapshot()
+            ) {
+                self.incrementExportProgress()
             }
 
             self.finishExport(with: updatedImages)
@@ -114,22 +71,18 @@ extension ImageToolsViewModel {
 
 extension ImageToolsViewModel {
     private func beginExport(total: Int) {
-        exportTotal = total
-        exportCompleted = 0
-        isExporting = true
+        exportProgress.begin(total: total)
     }
 
     private func incrementExportProgress() {
-        exportCompleted += 1
+        exportProgress.increment()
     }
 
     private func finishExport(with imagesToCommit: [ImageAsset]) {
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.3)) {
             images = imagesToCommit
         }
-        isExporting = false
-        exportCompleted = 0
-        exportTotal = 0
+        exportProgress.reset()
 
         let processedCount = imagesToCommit.filter { $0.isEdited }.count
         UsageTracker.shared.recordPipelineApplied(imageCount: processedCount)

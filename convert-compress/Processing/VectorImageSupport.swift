@@ -3,21 +3,6 @@ import AppKit
 import CoreImage
 import UniformTypeIdentifiers
 
-// MARK: - Protocol
-
-protocol VectorImageLoader {
-    static func canHandle(_ url: URL) -> Bool
-    static var supportedUTTypes: [UTType] { get }
-    static func intrinsicSize(for url: URL) throws -> CGSize
-}
-
-// MARK: - Registry & Shared Logic
-
-enum VectorImageError: Error {
-    case rasterizationFailed
-    case unsupportedFormat
-}
-
 enum VectorImageSupport {
     private static let minLongEdge: CGFloat = 1024
     private static let maxLongEdge: CGFloat = 3840

@@ -3,19 +3,11 @@ import CoreGraphics
 import UniformTypeIdentifiers
 
 protocol CustomImageEncoder {
+    var supportsMetadataStripping: Bool { get }
     func canEncode(utType: UTType) -> Bool
     func encode(cgImage: CGImage, pixelSize: CGSize, utType: UTType, compressionQuality: Double?, stripMetadata: Bool) throws -> Data
 }
 
-struct CustomImageEncoderRegistry {
-    private static let encoders: [CustomImageEncoder] = [
-        WebPEncoder(),
-        AVIFEncoder()
-    ]
-
-    static func encoder(for utType: UTType) -> CustomImageEncoder? {
-        encoders.first { $0.canEncode(utType: utType) }
-    }
+extension CustomImageEncoder {
+    var supportsMetadataStripping: Bool { false }
 }
-
-

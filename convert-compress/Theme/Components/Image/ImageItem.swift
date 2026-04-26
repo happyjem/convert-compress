@@ -1,56 +1,6 @@
 import SwiftUI
 import AppKit
 
-// MARK: Change Detection
-struct ImageChangeInfo {
-    let resolutionChanged: Bool
-    let fileSizeChanged: Bool
-    let formatChanged: Bool
-    let originalPixelSize: CGSize?
-    let targetPixelSize: CGSize?
-    let originalFileSize: Int?
-    let estimatedOutputSize: Int?
-    let originalFormat: ImageFormat?
-    let targetFormat: ImageFormat?
-    
-    var hasChanges: Bool {
-        resolutionChanged || fileSizeChanged || formatChanged
-    }
-    
-    @MainActor
-    init(asset: ImageAsset, vm: ImageToolsViewModel) {
-        let preview = vm.previewInfo(for: asset)
-        
-        self.originalPixelSize = asset.originalPixelSize
-        self.targetPixelSize = preview.targetPixelSize
-        self.originalFileSize = asset.originalFileSizeBytes
-        self.estimatedOutputSize = vm.estimatedByteCount(for: asset.id)
-        self.originalFormat = ImageExporter.inferFormat(from: asset.originalURL)
-        self.targetFormat = vm.selectedFormat ?? originalFormat
-        
-        // Detect changes
-        self.resolutionChanged = Self.hasResolutionChange(
-            from: originalPixelSize,
-            to: targetPixelSize
-        )
-        self.fileSizeChanged = Self.hasFileSizeChange(
-            from: originalFileSize,
-            to: estimatedOutputSize
-        )
-        self.formatChanged = (originalFormat != targetFormat)
-    }
-    
-    private static func hasResolutionChange(from original: CGSize?, to target: CGSize?) -> Bool {
-        guard let orig = original, let targ = target else { return false }
-        return Int(orig.width) != Int(targ.width) || Int(orig.height) != Int(targ.height)
-    }
-    
-    private static func hasFileSizeChange(from original: Int?, to target: Int?) -> Bool {
-        guard let orig = original, let targ = target else { return false }
-        return orig != targ
-    }
-}
-
 // MARK: Main View
 struct ImageItem: View {
     let asset: ImageAsset
@@ -58,7 +8,7 @@ struct ImageItem: View {
     let heroNamespace: Namespace.ID
     
     @State private var isHovering: Bool = false
-    @State private var keyEventMonitor: Any?
+    @State private var keyEventMonitor: LocalEventMonitor?
     
     private var fileName: String {
         asset.originalURL.lastPathComponent
@@ -161,7 +111,7 @@ private extension ImageItem {
 private extension ImageItem {
     func installKeyMonitor() {
         removeKeyMonitor()
-        keyEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak vm, asset] event in
+        keyEventMonitor = LocalEventMonitor(mask: .keyDown) { [weak vm, asset] event in
             // Spacebar
             if event.keyCode == 49 {
                 vm?.presentComparison(for: asset)
@@ -174,12 +124,11 @@ private extension ImageItem {
             }
             return event
         }
+        keyEventMonitor?.start()
     }
     
     func removeKeyMonitor() {
-        if let monitor = keyEventMonitor {
-            NSEvent.removeMonitor(monitor)
-            keyEventMonitor = nil
-        }
+        keyEventMonitor?.stop()
+        keyEventMonitor = nil
     }
 }

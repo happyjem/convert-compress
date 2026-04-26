@@ -20,7 +20,7 @@ struct UnrestrictedResizeControl: View {
                         )
                         .transition(.opacity)
                     } else {
-                        ResizeCropView()
+                        ResizeCropControl()
                             .transition(.opacity)
                     }
                 }

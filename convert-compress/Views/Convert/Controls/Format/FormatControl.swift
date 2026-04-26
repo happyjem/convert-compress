@@ -7,7 +7,7 @@ struct FormatControl: View {
     
     private let controlHeight: CGFloat = Theme.Metrics.controlHeight
     
-    @State private var keyEventMonitor: Any?
+    @State private var keyEventMonitor: LocalEventMonitor?
     
     private var pinnedFormats: [ImageFormat] {
         [ImageFormat(utType: .png), ImageFormat(utType: .jpeg), ImageFormat(utType: .heic), ImageFormat(utType: .webP)]
@@ -26,12 +26,12 @@ struct FormatControl: View {
         vm.selectedFormat?.displayName ?? String(localized: "Format")
     }
     
-    private func shortcutFor(format: ImageFormat) -> String? {
+    private func shortcutFor(format: ImageFormat) -> Character? {
         switch format.utType {
-        case .png: return "P"
-        case .jpeg: return "J"
-        case .heic: return "H"
-        case .webP: return "W"
+        case .png: return "p"
+        case .jpeg: return "j"
+        case .heic: return "h"
+        case .webP: return "w"
         default: return nil
         }
     }
@@ -112,21 +112,12 @@ private extension FormatControl {
     
     @ViewBuilder
     func pinnedRowButton(_ f: ImageFormat) -> some View {
-        if f.utType == .png {
+        if let shortcut = shortcutFor(format: f) {
             Button(f.displayName) { selectFormat(f) }
-                .keyboardShortcut(.init("p"), modifiers: [])
+                .keyboardShortcut(KeyEquivalent(shortcut), modifiers: [])
                 .help(f.fullName)
-        } else if f.utType == .jpeg {
+        } else {
             Button(f.displayName) { selectFormat(f) }
-                .keyboardShortcut(.init("j"), modifiers: [])
-                .help(f.fullName)
-        } else if f.utType == .heic {
-            Button(f.displayName) { selectFormat(f) }
-                .keyboardShortcut(.init("h"), modifiers: [])
-                .help(f.fullName)
-        } else if f.utType == .webP {
-            Button(f.displayName) { selectFormat(f) }
-                .keyboardShortcut(.init("w"), modifiers: [])
                 .help(f.fullName)
         }
     }
@@ -136,10 +127,8 @@ private extension FormatControl {
 private extension FormatControl {
     func installKeyMonitor() {
         removeKeyMonitor()
-        keyEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            // Don't intercept keystrokes if a text field is focused
-            if let firstResponder = NSApp.keyWindow?.firstResponder,
-               firstResponder is NSTextView || firstResponder is NSTextField {
+        keyEventMonitor = LocalEventMonitor(mask: .keyDown) { event in
+            if FirstResponderFocus.isTextInputFocused {
                 return event
             }
             
@@ -149,23 +138,21 @@ private extension FormatControl {
             switch chars {
             case "o":
                 selectFormat(nil); return nil
-            case "p":
-                if let fmt = pinnedFormats.first(where: { $0.utType == .png }) { selectFormat(fmt); return nil }
-            case "j":
-                if let fmt = pinnedFormats.first(where: { $0.utType == .jpeg }) { selectFormat(fmt); return nil }
-            case "h":
-                if let fmt = pinnedFormats.first(where: { $0.utType == .heic }) { selectFormat(fmt); return nil }
-            case "w":
-                if let fmt = pinnedFormats.first(where: { $0.utType == .webP }) { selectFormat(fmt); return nil }
             default:
+                if let matchingFormat = pinnedFormats.first(where: { shortcutFor(format: $0).map(String.init) == chars }) {
+                    selectFormat(matchingFormat)
+                    return nil
+                }
                 break
             }
             return event
         }
+        keyEventMonitor?.start()
     }
     
     func removeKeyMonitor() {
-        if let monitor = keyEventMonitor { NSEvent.removeMonitor(monitor); keyEventMonitor = nil }
+        keyEventMonitor?.stop()
+        keyEventMonitor = nil
     }
 }
 

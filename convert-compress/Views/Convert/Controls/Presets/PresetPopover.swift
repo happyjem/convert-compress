@@ -96,30 +96,28 @@ struct PresetPopover: View {
             isEditing: true,
             backgroundColor: Color.accentColor.opacity(0.10),
             trailingButtons: {
-                AnyView(
-                    HStack(spacing: 0) {
-                        HoverIconButton(
-                            systemName: "xmark",
-                            action: {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    isAddingPreset = false
-                                    newPresetName = ""
-                                }
-                            },
-                            iconWeight: .medium,
-                            cornerRadius: 6
-                        )
-                        .help("Cancel")
-                        
-                        HoverIconButton(
-                            systemName: "checkmark",
-                            action: saveNewPreset,
-                            iconWeight: .bold,
-                            cornerRadius: 6
-                        )
-                        .help("Save preset")
-                    }
-                )
+                HStack(spacing: 0) {
+                    HoverIconButton(
+                        systemName: "xmark",
+                        action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isAddingPreset = false
+                                newPresetName = ""
+                            }
+                        },
+                        iconWeight: .medium,
+                        cornerRadius: 6
+                    )
+                    .help("Cancel")
+
+                    HoverIconButton(
+                        systemName: "checkmark",
+                        action: saveNewPreset,
+                        iconWeight: .bold,
+                        cornerRadius: 6
+                    )
+                    .help("Save preset")
+                }
             },
             isFocused: $isTextFieldFocused,
             onSubmit: saveNewPreset

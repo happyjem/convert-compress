@@ -70,11 +70,9 @@ extension ImageToolsViewModel {
     }
 
     func bumpRecentFormats(_ format: ImageFormat) {
-        recentFormats.removeAll { $0 == format }
-        recentFormats.insert(format, at: 0)
-        if recentFormats.count > 3 {
-            recentFormats = Array(recentFormats.prefix(3))
-        }
+        var recents = RecentList(recentFormats, maxCount: 3)
+        recents.insert(format)
+        recentFormats = recents.elements
     }
     
     // MARK: - Private Methods
@@ -125,14 +123,7 @@ extension ImageToolsViewModel {
     }
     
     private func prepareIngestionState(for count: Int) {
-        if !isIngesting {
-            ingestCompleted = 0
-            ingestTotal = 0
-        }
-        ingestTotal += count
-        if ingestTotal > ingestCompleted {
-            isIngesting = true
-        }
+        ingestionProgress.addToTotal(count)
     }
     
     private func loadThumbnails(for assets: [ImageAsset]) async {
@@ -185,9 +176,6 @@ extension ImageToolsViewModel {
     }
 
     private func incrementIngestionProgress() {
-        ingestCompleted = min(ingestCompleted + 1, ingestTotal)
-        if ingestCompleted >= ingestTotal {
-            isIngesting = false
-        }
+        ingestionProgress.increment()
     }
 }

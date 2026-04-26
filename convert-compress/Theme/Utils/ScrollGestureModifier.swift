@@ -8,7 +8,7 @@ struct ScrollGestureModifier: ViewModifier {
     let isEnabled: Bool
     let onScroll: (Int) -> Void
     
-    @State private var scrollMonitor: Any?
+    @State private var scrollMonitor: LocalEventMonitor?
     @State private var scrollAccumulator = 0.0
     
     func body(content: Content) -> some View {
@@ -22,7 +22,7 @@ struct ScrollGestureModifier: ViewModifier {
     
     private func installScrollMonitor() {
         removeScrollMonitor()
-        scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [self] event in
+        scrollMonitor = LocalEventMonitor(mask: .scrollWheel) { [self] event in
             guard isEnabled, abs(event.scrollingDeltaX) > 0.1 else { return nil }
             
             scrollAccumulator += event.scrollingDeltaX > 0 ? 1 : -1
@@ -34,13 +34,12 @@ struct ScrollGestureModifier: ViewModifier {
             }
             return nil
         }
+        scrollMonitor?.start()
     }
     
     private func removeScrollMonitor() {
-        if let monitor = scrollMonitor {
-            NSEvent.removeMonitor(monitor)
-            scrollMonitor = nil
-        }
+        scrollMonitor?.stop()
+        scrollMonitor = nil
     }
 }
 

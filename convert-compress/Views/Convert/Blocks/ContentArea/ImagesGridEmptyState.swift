@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ImagesListEmptyState: View {
+struct ImagesGridEmptyState: View {
     let onPaste: () -> Void
     let onPickFromFinder: () -> Void
     
@@ -37,9 +37,9 @@ struct ImagesListEmptyState: View {
     }
 }
 
-struct ImagesListEmptyState_Previews: PreviewProvider {
+struct ImagesGridEmptyState_Previews: PreviewProvider {
     static var previews: some View {
-        ImagesListEmptyState(
+        ImagesGridEmptyState(
             onPaste: {},
             onPickFromFinder: {}
         )

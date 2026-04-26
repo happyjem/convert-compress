@@ -18,7 +18,7 @@ struct ComparisonView: View {
     @State private var sliderPosition: CGFloat = 0.5
     @State private var showUI: Bool = false
     @State private var previousPosition: CGFloat = 0.5
-    @State private var keyEventMonitor: Any?
+    @State private var keyEventMonitor: LocalEventMonitor?
     @StateObject private var zoomPanState = ZoomPanState()
     @State private var lastDragLocation: CGPoint = .zero
     @State private var lastPointerLocation: CGPoint = .zero
@@ -403,10 +403,8 @@ struct ComparisonView: View {
     
     private func installKeyMonitor() {
         removeKeyMonitor()
-        keyEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            
-            // Check if a text field is currently focused - if so, let all keys pass through
-            if isTextFieldFocused() {
+        keyEventMonitor = LocalEventMonitor(mask: .keyDown) { event in
+            if FirstResponderFocus.isTextInputFocused {
                 return event
             }
             
@@ -431,17 +429,11 @@ struct ComparisonView: View {
                 return event
             }
         }
+        keyEventMonitor?.start()
     }
     
     private func removeKeyMonitor() {
-        if let monitor = keyEventMonitor {
-            NSEvent.removeMonitor(monitor)
-            keyEventMonitor = nil
-        }
-    }
-    
-    private func isTextFieldFocused() -> Bool {
-        guard let firstResponder = NSApp.keyWindow?.firstResponder else { return false }
-        return firstResponder is NSText || firstResponder is NSTextField
+        keyEventMonitor?.stop()
+        keyEventMonitor = nil
     }
 }
