@@ -35,6 +35,7 @@ alwaysApply: true
 
 
 ## Folders
-- Use `convert-compress/Core/Models` for models
-- Use `convert-compress/Core/Constants` for constants
-- 
+- Use `convert-compress/Core/Models` for value-type domain models
+- Use `convert-compress/Core/Constants` for constants (including `StorageKeys`)
+- Use `convert-compress/Core/Logging` for the `AppLogger` namespace
+- See `conventions.mdc` for the complete project layout and naming rules

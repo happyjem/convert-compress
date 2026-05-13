@@ -1,0 +1,40 @@
+name: Bug report
+description: Report something that is not working.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: issue
+    attributes:
+      label: What happened?
+      placeholder: |
+        Tell us what went wrong.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What should have happened?
+
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version
+      placeholder: "Example: macOS 14.6"
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Screenshots or sample files
+      description: Optional, but helpful.

@@ -1,6 +1,5 @@
 import Foundation
 import AppKit
-import OSLog
 
 /// Manages security-scoped access to a URL. Automatically stops access on deinit.
 final class SandboxAccessToken {
@@ -30,7 +29,6 @@ final class SandboxAccessToken {
 actor SandboxAccessManager {
     static let shared = SandboxAccessManager()
 
-    private let logger = Logger(subsystem: AppConstants.bundleIdentifier, category: "Sandbox")
     private var grantedDirectories: Set<String> = []
 
     private init() {}
@@ -53,7 +51,7 @@ actor SandboxAccessManager {
         // Can we already write here?
         if canWrite(to: dir) {
             markGranted(dir.path)
-            logger.info("Directory accessible: \(dir.path, privacy: .public)")
+            AppLogger.sandbox.info("Directory accessible: \(dir.path, privacy: .public)")
             return true
         }
 
@@ -75,12 +73,12 @@ actor SandboxAccessManager {
         }
         
         guard let selected else {
-            logger.warning("Access denied: \(dir.path, privacy: .public)")
+            AppLogger.sandbox.warning("Access denied: \(dir.path, privacy: .public)")
             return false
         }
 
         markGranted(selected.path)
-        logger.info("Access granted: \(selected.path, privacy: .public)")
+        AppLogger.sandbox.info("Access granted: \(selected.path, privacy: .public)")
         return true
     }
     

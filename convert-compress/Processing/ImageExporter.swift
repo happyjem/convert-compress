@@ -10,10 +10,12 @@ struct ImageExporter {
     }()
     // MARK: - DRY helpers
     private static func decideActualUTType(originalURL: URL, requestedFormat: ImageFormat?) -> UTType {
-        let requestedFormat: ImageFormat = requestedFormat ?? (inferFormat(from: originalURL) ?? ImageIOCapabilities.shared.format(forIdentifier: UTType.png.identifier)!)
-        let requestedUTI: UTType = requestedFormat.utType
         let caps = ImageIOCapabilities.shared
-        if caps.supportsWriting(utType: requestedUTI) { return requestedUTI }
+        let resolvedRequest: UTType = requestedFormat?.utType
+            ?? inferFormat(from: originalURL)?.utType
+            ?? caps.format(forIdentifier: UTType.png.identifier)?.utType
+            ?? .png
+        if caps.supportsWriting(utType: resolvedRequest) { return resolvedRequest }
         if caps.supportsWriting(utType: .png) { return .png }
         return .jpeg
     }
@@ -26,9 +28,9 @@ struct ImageExporter {
     private static func buildDestinationProperties(originalURL: URL, actualUTI: UTType, compressionQuality: Double?, stripMetadata: Bool) -> [CFString: Any] {
         var props: [CFString: Any] = [:]
         if !stripMetadata {
-            if let src = CGImageSourceCreateWithURL(originalURL as CFURL, nil),
-               let meta = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any] {
-                for (k, v) in meta { props[k] = v }
+            if let source = CGImageSourceCreateWithURL(originalURL as CFURL, nil),
+               let metadata = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
+                for (key, value) in metadata { props[key] = value }
             }
         }
         props[kCGImagePropertyOrientation] = 1
@@ -45,26 +47,35 @@ struct ImageExporter {
     static func encodeToData(ciImage: CIImage, originalURL: URL, format: ImageFormat?, compressionQuality: Double?, stripMetadata: Bool = false) throws -> (data: Data, uti: UTType) {
         let actualUTI = decideActualUTType(originalURL: originalURL, requestedFormat: format)
         let ciContext = ImageExporter.sharedCIContext
-        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+        guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
+            throw ImageOperationError.exportFailed
+        }
         guard let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent, format: .RGBA8, colorSpace: colorSpace) else {
             throw ImageOperationError.exportFailed
         }
 
-        // Custom encoder if available for this UTType
         if let encoder = CustomImageEncoderRegistry.encoder(for: actualUTI) {
             let size = CGSize(width: ciImage.extent.width, height: ciImage.extent.height)
-            let data = try encoder.encode(cgImage: cgImage, pixelSize: size, utType: actualUTI, compressionQuality: compressionQuality, stripMetadata: stripMetadata)
+            if stripMetadata && !encoder.supportsMetadataStripping {
+                AppLogger.export.warning("Metadata stripping is not supported by custom encoder for \(actualUTI.identifier, privacy: .public)")
+            }
+            let data = try encoder.encode(
+                cgImage: cgImage,
+                pixelSize: size,
+                utType: actualUTI,
+                compressionQuality: compressionQuality,
+                stripMetadata: stripMetadata && encoder.supportsMetadataStripping
+            )
             return (data, actualUTI)
         }
 
-        // Default path: ImageIO
         let props = buildDestinationProperties(originalURL: originalURL, actualUTI: actualUTI, compressionQuality: compressionQuality, stripMetadata: stripMetadata)
-        let cfData = CFDataCreateMutable(nil, 0)!
-        guard let dest = CGImageDestinationCreateWithData(cfData, actualUTI.identifier as CFString, 1, nil) else {
+        guard let cfData = CFDataCreateMutable(nil, 0),
+              let destination = CGImageDestinationCreateWithData(cfData, actualUTI.identifier as CFString, 1, nil) else {
             throw ImageOperationError.exportFailed
         }
-        CGImageDestinationAddImage(dest, cgImage, props as CFDictionary)
-        guard CGImageDestinationFinalize(dest) else { throw ImageOperationError.exportFailed }
+        CGImageDestinationAddImage(destination, cgImage, props as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else { throw ImageOperationError.exportFailed }
         let data = cfData as Data
         return (data, actualUTI)
     }

@@ -2,34 +2,6 @@ import Foundation
 import AppKit
 import Combine
 
-// MARK: - Comparison State Models
-
-struct ComparisonSelection: Equatable {
-    let assetID: UUID
-}
-
-struct ComparisonPreviewState {
-    var originalImage: NSImage?
-    var processedImage: NSImage?
-    var isLoading: Bool
-    var errorMessage: String?
-    var cropRegion: CGRect?
-    var originalSize: CGSize?
-    var processedSize: CGSize?
-
-    static let empty = ComparisonPreviewState(
-        originalImage: nil,
-        processedImage: nil,
-        isLoading: false,
-        errorMessage: nil,
-        cropRegion: nil,
-        originalSize: nil,
-        processedSize: nil
-    )
-}
-
-// MARK: - Comparison Logic
-
 extension ImageToolsViewModel {
     // Setup comparison state observation
     func setupComparisonObservation() {
@@ -49,24 +21,16 @@ extension ImageToolsViewModel {
                     self.comparisonPreview = .empty
                     self.comparisonPreviewTask?.cancel()
                     self.comparisonPreviewTask = nil
-                    self.liveRenderDebounceWorkItem?.cancel()
+                    self.liveRenderDebouncer.cancel()
                 }
                 // Note: Don't trigger refresh here - let ComparisonView do it after animation
             }
             .store(in: &cancellables)
         
         // Refresh comparison preview when any pipeline-affecting setting changes
-        var lastConfig = currentConfiguration
-        objectWillChange
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                let config = self.currentConfiguration
-                guard config != lastConfig else { return }
-                lastConfig = config
-                self.scheduleComparisonPreviewRefresh()
-            }
-            .store(in: &cancellables)
+        observeConfigurationChanges { [weak self] in
+            self?.scheduleComparisonPreviewRefresh()
+        }
     }
     // MARK: - Comparison Flow
     
@@ -126,12 +90,9 @@ extension ImageToolsViewModel {
     
     func scheduleComparisonPreviewRefresh() {
         guard comparisonSelection != nil else { return }
-        liveRenderDebounceWorkItem?.cancel()
-        let work = DispatchWorkItem { [weak self] in
+        liveRenderDebouncer.schedule(after: .milliseconds(250)) { [weak self] in
             self?.refreshComparisonPreview()
         }
-        liveRenderDebounceWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: work)
     }
     
     // MARK: - Private
@@ -172,7 +133,10 @@ extension ImageToolsViewModel {
                     data = cached.data
                     cacheEntry = nil
                 } else {
-                    let encoded = try pipeline!.renderEncodedData(on: asset)
+                    guard let pipeline else {
+                        throw ImageOperationError.exportFailed
+                    }
+                    let encoded = try pipeline.renderEncodedData(on: asset)
                     data = encoded.data
                     cacheEntry = ProcessedImageData(data: data, uti: encoded.uti, configuration: config)
                 }
@@ -220,48 +184,17 @@ extension ImageToolsViewModel {
     
     /// Calculate the normalized crop region (0-1 coordinates) on the original image
     func calculateCropRegion(for asset: ImageAsset) -> CGRect? {
-        guard resizeMode == .crop,
-              let targetWidth = Int(resizeWidth),
-              let targetHeight = Int(resizeHeight),
+        guard let targetSize = currentConfiguration.resizeSpecification.cropSize,
               let originalSize = asset.originalPixelSize,
               originalSize.width > 0,
               originalSize.height > 0 else {
             return nil
         }
-        
-        let currentWidth = originalSize.width
-        let currentHeight = originalSize.height
-        let targetW = CGFloat(targetWidth)
-        let targetH = CGFloat(targetHeight)
-        
-        // Calculate scale to COVER the target dimensions (matching CropOperation logic)
-        let scaleX = targetW / currentWidth
-        let scaleY = targetH / currentHeight
-        let scale = max(scaleX, scaleY)
-        
-        // Size after scaling
-        let scaledWidth = currentWidth * scale
-        let scaledHeight = currentHeight * scale
-        
-        // Center crop position (in scaled space)
-        let cropX = (scaledWidth - targetW) / 2
-        let cropY = (scaledHeight - targetH) / 2
-        
-        // Convert back to original image space
-        let originXInOriginal = cropX / scale
-        let originYInOriginal = cropY / scale
-        let widthInOriginal = targetW / scale
-        let heightInOriginal = targetH / scale
-        
-        // Normalize to 0-1 range
-        let normalizedRect = CGRect(
-            x: originXInOriginal / currentWidth,
-            y: originYInOriginal / currentHeight,
-            width: widthInOriginal / currentWidth,
-            height: heightInOriginal / currentHeight
+
+        return CropGeometry.normalizedCenterCropRegion(
+            originalSize: originalSize,
+            targetSize: targetSize
         )
-        
-        return normalizedRect
     }
 }
 

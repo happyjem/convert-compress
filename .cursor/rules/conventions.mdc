@@ -1,0 +1,101 @@
+---
+alwaysApply: true
+---
+
+# Project Conventions
+
+Conventions for this codebase. Follow them when adding or modifying code.
+
+## Project Layout
+
+```
+convert-compress/
+├── App/              # App entry point, commands, window config
+├── Assets/           # Static visual assets (icons)
+├── Assets.xcassets/  # Asset catalogs
+├── Core/
+│   ├── Constants/    # App-wide constants (AppConstants, StorageKeys, ResizeConstants)
+│   ├── Logging/      # Central AppLogger namespace
+│   └── Models/       # Value-type domain models (structs/enums only)
+├── Processing/       # Image pipeline (CIImage-based)
+│   ├── Encoder/      # CustomImageEncoder implementations
+│   ├── Metadata/     # Image metadata readers/helpers
+│   ├── Sizing/       # Resize/crop/preview sizing math
+│   └── Types/        # Processing-related type extensions
+├── Services/         # Singletons & stateful coordinators (one folder per service)
+├── Shaders/          # Metal shaders
+├── StoreKit/         # StoreKit configuration
+├── Theme/
+│   └── Components/   # Reusable view components, grouped by category
+├── Utils/            # Stateless, reusable, non-domain helpers grouped by concern
+│   ├── AppKit/       # AppKit bridges and responder/event helpers
+│   ├── Collections/  # Generic collection/data-structure helpers
+│   ├── Concurrency/  # Generic async/timing helpers
+│   ├── Formatting/   # Generic parsing/formatting helpers
+│   └── SwiftUI/      # Small SwiftUI-only extensions
+├── ViewModels/       # @MainActor @Observable/ObservableObject VMs; split via extensions
+└── Views/            # SwiftUI views, scoped to features
+```
+
+## File Naming
+
+- One type per file, named after the primary type: `Foo.swift` contains `struct Foo` (or closely related helpers in a `// MARK: -` section).
+- ViewModel partials: `ImageToolsViewModel+<Concern>.swift`. The concern must match the actual responsibility (e.g. `+Export`, not `+Processing`).
+- Views follow block/feature/control nesting: `Views/<Feature>/Blocks/...` for layout blocks; `Views/<Feature>/Controls/...` for interactive controls; each control lives under its own folder when it has more than one file.
+- Test files in `convert-compress-tests/` mirror source layout.
+
+## Architecture
+
+- `@MainActor @Observable` for new state containers; retain `ObservableObject` where already entrenched (`ImageToolsViewModel`).
+- Prefer value types (`struct`, `enum`) for models. Services that own shared state may be `actor` or `@MainActor final class`.
+- Inject dependencies explicitly. Singletons are reserved for truly app-wide services: `ImageIOCapabilities`, `SandboxAccessManager`, `PurchaseManager`, `PaywallCoordinator`, `RatingCoordinator`, `UsageTracker`, `PresetsStore`, `AppLogger`.
+- Side-effectful operations run via `Task` with explicit priority. Avoid `DispatchQueue.main.async*` except where SwiftUI-adjacent debouncing is simpler; prefer the `Debouncer` utility for debouncing.
+- Feature state machines: model as `enum` with associated values.
+
+## UserDefaults / Persistence
+
+All persisted keys go through `Core/Constants/StorageKeys.swift`. No literal string keys in feature code.
+
+Namespace: `"<bundleIdentifier>.<feature>.<name>.v<version>"`, lowercase snake_case for `<feature>.<name>`. Bump the `v<version>` suffix when a key's schema changes.
+
+Storage choices:
+- `UserDefaults.standard` for local preferences and local-only state.
+- `NSUbiquitousKeyValueStore.default` for iCloud-synced state (e.g., presets).
+
+## Logging
+
+Use `AppLogger` from `Core/Logging/AppLogger.swift`. Never use `print` for diagnostics.
+
+```swift
+AppLogger.ingestion.debug("…")
+AppLogger.purchase.error("…")
+```
+
+Add new categories to `AppLogger` as the app grows. Categories are short, lower-case words (e.g. `ingestion`, `sandbox`, `purchase`, `presets`).
+
+## Concurrency
+
+- UI state mutations on `@MainActor`. Cross-actor hops: `await MainActor.run { … }`.
+- Use `AsyncSemaphore` (in `Utils/Concurrency/`) for bounded concurrency.
+- Use `Debouncer` (in `Utils/Concurrency/`) for any "wait X ms, then run" patterns. Do not recreate ad-hoc `DispatchWorkItem` debouncing.
+
+## Error Handling
+
+- Domain errors: dedicated `enum FooError: Error` in the same module as the consumer.
+- Avoid `try?` at error-producing seams where the failure deserves a log.
+- No force-unwraps (`!`) in production code except for well-known compile-time invariants (e.g. a constant `UTType` identifier used in multiple stable system paths). Document any exception.
+
+## SwiftUI
+
+- Keep `body` short; extract computed vars and small `@ViewBuilder` helpers.
+- Reusable components live in `Theme/Components/<Category>/`.
+- `@EnvironmentObject` only for app-global view models; `@Bindable` for `@Observable` coordinators; `@StateObject`/`@ObservedObject` for legacy `ObservableObject` use.
+- Animation constants come from `Theme.Animations`; metrics from `Theme.Metrics`; colors from `Theme.Colors`; fonts from `Theme.Fonts`.
+
+## Localization
+
+- Every user-facing string uses `String(localized:)` with a stable default. Do not hardcode UI copy.
+
+## Rule Maintenance
+
+When introducing a new convention (folder, naming rule, pattern), update this file in the same change.

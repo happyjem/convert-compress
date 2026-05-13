@@ -13,6 +13,10 @@ struct AVIFEncoder: CustomImageEncoder {
         let height = cgImage.height
         let bytesPerRow = width * 4
 
+        guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
+            throw ImageOperationError.exportFailed
+        }
+
         let pixels = UnsafeMutablePointer<UInt8>.allocate(capacity: height * bytesPerRow)
         defer { pixels.deallocate() }
 
@@ -22,7 +26,7 @@ struct AVIFEncoder: CustomImageEncoder {
             height: height,
             bitsPerComponent: 8,
             bytesPerRow: bytesPerRow,
-            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            space: colorSpace,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
             throw ImageOperationError.exportFailed
@@ -61,7 +65,10 @@ struct AVIFEncoder: CustomImageEncoder {
             throw ImageOperationError.exportFailed
         }
 
-        let data = Data(bytes: raw.data!, count: raw.size)
+        guard let rawData = raw.data else {
+            throw ImageOperationError.exportFailed
+        }
+        let data = Data(bytes: rawData, count: raw.size)
         avifRWDataFree(&raw)
         return data
     }

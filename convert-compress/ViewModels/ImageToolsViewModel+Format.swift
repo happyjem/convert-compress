@@ -2,12 +2,7 @@ import Foundation
 
 extension ImageToolsViewModel {
     func updateRestrictions(for format: ImageFormat?) {
-        let caps = ImageIOCapabilities.shared
-        if let fmt = format, let set = caps.sizeRestrictions(forUTType: fmt.utType) {
-            allowedSquareSizes = set.sorted()
-        } else {
-            allowedSquareSizes = nil
-        }
+        allowedSquareSizes = RestrictedFormatSizing.allowedSquareSizes(for: format)
     }
 
     func onSelectedFormatChanged(_ format: ImageFormat?) {
@@ -15,17 +10,17 @@ extension ImageToolsViewModel {
         guard allowedSquareSizes != nil else { return }
         
         // Choose a reference size from first asset (prefer cached value)
-        guard let first = images.first else { return }
-        let srcSize = first.originalPixelSize ?? .zero
+        guard let firstImage = images.first else { return }
+        let sourceSize = firstImage.originalPixelSize ?? .zero
         
-        let caps = ImageIOCapabilities.shared
-        if let fmt = format, !caps.isValidPixelSize(srcSize, for: fmt.utType) {
-            // Force resize mode and prefill suggestion
-            resizeMode = .resize
-            if let side = caps.suggestedSquareSide(for: fmt.utType, source: srcSize) {
-                resizeWidth = String(side)
-                resizeHeight = String(side)
-            }
+        if let side = RestrictedFormatSizing.targetSquareSide(
+            sourceSize: sourceSize,
+            resize: currentConfiguration.resizeSpecification,
+            format: format
+        ) {
+            resizeMode = .crop
+            resizeWidth = String(side)
+            resizeHeight = String(side)
         }
     }
 }

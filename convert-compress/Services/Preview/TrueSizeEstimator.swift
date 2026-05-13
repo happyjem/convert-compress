@@ -8,31 +8,15 @@ struct TrueSizeEstimator {
         guard !assets.isEmpty else { return [:] }
 
         let pipeline = PipelineBuilder().build(configuration: configuration, exportDirectory: nil)
-        let maxConcurrent = 4
-        var results: [UUID: ProcessedImageData] = [:]
-        var index = 0
-
-        while index < assets.count {
-            guard !Task.isCancelled else { break }
-
-            let end = min(index + maxConcurrent, assets.count)
-            let slice = Array(assets[index..<end])
-            await withTaskGroup(of: (UUID, ProcessedImageData)?.self) { group in
-                for asset in slice {
-                    group.addTask(priority: .utility) {
-                        guard !Task.isCancelled else { return nil }
-                        return processOne(asset: asset, pipeline: pipeline, configuration: configuration)
-                    }
-                }
-                for await item in group {
-                    if let (id, result) = item { results[id] = result }
-                }
-            }
-            index = end
-            await Task.yield()
+        let results = await ConcurrentMap.compactMap(
+            assets,
+            maxConcurrent: 4,
+            priority: .utility
+        ) { asset in
+            processOne(asset: asset, pipeline: pipeline, configuration: configuration)
         }
 
-        return results
+        return Dictionary(uniqueKeysWithValues: results)
     }
 
     private static func processOne(
@@ -49,6 +33,7 @@ struct TrueSizeEstimator {
             )
             return (asset.id, result)
         } catch {
+            AppLogger.processing.error("Preview size estimation failed for \(asset.originalURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }

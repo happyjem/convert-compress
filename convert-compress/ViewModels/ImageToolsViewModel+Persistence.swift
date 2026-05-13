@@ -2,123 +2,103 @@ import Foundation
 import Combine
 
 extension ImageToolsViewModel {
-    // Setup persistence - automatically saves when values change
+    private typealias Keys = StorageKeys.Pipeline
+
+    /// Installs Combine sinks that persist pipeline settings as they change.
     func setupPersistenceObservation() {
         let defaults = UserDefaults.standard
-        
+
         $exportDirectory.dropFirst().sink { dir in
-            if let dir { defaults.set(dir.path, forKey: PersistenceKeys.exportDirectory) }
-            else { defaults.removeObject(forKey: PersistenceKeys.exportDirectory) }
+            if let dir { defaults.set(dir.path, forKey: Keys.exportDirectory) }
+            else { defaults.removeObject(forKey: Keys.exportDirectory) }
         }.store(in: &cancellables)
-        
+
         $resizeMode.dropFirst().sink { mode in
-            defaults.set(mode == .resize ? "resize" : "crop", forKey: PersistenceKeys.resizeMode)
+            defaults.set(mode == .resize ? "resize" : "crop", forKey: Keys.resizeMode)
         }.store(in: &cancellables)
-        
+
         $resizeWidth.dropFirst().sink { width in
-            defaults.set(width, forKey: PersistenceKeys.resizeWidth)
+            defaults.set(width, forKey: Keys.resizeWidth)
         }.store(in: &cancellables)
-        
+
         $resizeHeight.dropFirst().sink { height in
-            defaults.set(height, forKey: PersistenceKeys.resizeHeight)
+            defaults.set(height, forKey: Keys.resizeHeight)
         }.store(in: &cancellables)
-        
+
         $resizeLongEdge.dropFirst().sink { longEdge in
-            defaults.set(longEdge, forKey: PersistenceKeys.resizeLongEdge)
+            defaults.set(longEdge, forKey: Keys.resizeLongEdge)
         }.store(in: &cancellables)
-        
+
         $selectedFormat.dropFirst().sink { [weak self] newFormat in
-            defaults.set(newFormat?.id, forKey: PersistenceKeys.selectedFormat)
+            defaults.set(newFormat?.id, forKey: Keys.selectedFormat)
             self?.onSelectedFormatChanged(newFormat)
         }.store(in: &cancellables)
-        
+
         $recentFormats.dropFirst().sink { formats in
-            defaults.set(formats.map { $0.id }, forKey: PersistenceKeys.recentFormats)
+            defaults.set(formats.map { $0.id }, forKey: Keys.recentFormats)
         }.store(in: &cancellables)
-        
+
         $compressionPercent.dropFirst().sink { percent in
-            defaults.set(percent, forKey: PersistenceKeys.compressionPercent)
+            defaults.set(percent, forKey: Keys.compressionPercent)
         }.store(in: &cancellables)
-        
+
         $flipV.dropFirst().sink { flip in
-            defaults.set(flip, forKey: PersistenceKeys.flipV)
+            defaults.set(flip, forKey: Keys.flipV)
         }.store(in: &cancellables)
-        
+
         $removeBackground.dropFirst().sink { remove in
-            defaults.set(remove, forKey: PersistenceKeys.removeBackground)
+            defaults.set(remove, forKey: Keys.removeBackground)
         }.store(in: &cancellables)
-        
+
         $removeMetadata.dropFirst().sink { remove in
-            defaults.set(remove, forKey: PersistenceKeys.removeMetadata)
+            defaults.set(remove, forKey: Keys.removeMetadata)
         }.store(in: &cancellables)
-    }
-    
-    private enum PersistenceKeys {
-        static let exportDirectory = "convert-compress.export_directory.v1"
-        static let resizeMode = "convert-compress.resize_mode.v1"
-        static let resizeWidth = "convert-compress.resize_width.v1"
-        static let resizeHeight = "convert-compress.resize_height.v1"
-        static let resizeLongEdge = "convert-compress.resize_long_edge.v1"
-        static let selectedFormat = "convert-compress.selected_format.v1"
-        static let recentFormats = "convert-compress.recent_formats.v1"
-        static let compressionPercent = "convert-compress.compression_percent.v1"
-        static let flipV = "convert-compress.flip_v.v1"
-        static let removeBackground = "convert-compress.remove_background.v1"
-        static let removeMetadata = "convert-compress.remove_metadata.v1"
     }
 
     func loadPersistedState() {
         let defaults = UserDefaults.standard
-        
-        // Export directory
-        if let exportPath = defaults.string(forKey: PersistenceKeys.exportDirectory) {
+
+        if let exportPath = defaults.string(forKey: Keys.exportDirectory) {
             exportDirectory = URL(fileURLWithPath: exportPath)
         }
-        
-        // Resize settings
-        if let modeRaw = defaults.string(forKey: PersistenceKeys.resizeMode) {
+
+        if let modeRaw = defaults.string(forKey: Keys.resizeMode) {
             resizeMode = (modeRaw == "resize") ? .resize : .crop
         }
-        if let width = defaults.string(forKey: PersistenceKeys.resizeWidth) {
+        if let width = defaults.string(forKey: Keys.resizeWidth) {
             resizeWidth = width
         }
-        if let height = defaults.string(forKey: PersistenceKeys.resizeHeight) {
+        if let height = defaults.string(forKey: Keys.resizeHeight) {
             resizeHeight = height
         }
-        if let longEdge = defaults.string(forKey: PersistenceKeys.resizeLongEdge) {
+        if let longEdge = defaults.string(forKey: Keys.resizeLongEdge) {
             resizeLongEdge = longEdge
         }
-        
-        // Format settings
-        if let selRaw = defaults.string(forKey: PersistenceKeys.selectedFormat),
-           let fmt = ImageIOCapabilities.shared.format(forIdentifier: selRaw) {
-            let caps = ImageIOCapabilities.shared
-            if caps.supportsWriting(utType: fmt.utType) {
-                selectedFormat = fmt
+
+        if let selectedFormatIdentifier = defaults.string(forKey: Keys.selectedFormat),
+           let persistedFormat = ImageIOCapabilities.shared.format(forIdentifier: selectedFormatIdentifier) {
+            if ImageIOCapabilities.shared.supportsWriting(utType: persistedFormat.utType) {
+                selectedFormat = persistedFormat
             }
         }
-        if let raw = defaults.array(forKey: PersistenceKeys.recentFormats) as? [String] {
+        if let raw = defaults.array(forKey: Keys.recentFormats) as? [String] {
             let mapped = raw.compactMap { ImageIOCapabilities.shared.format(forIdentifier: $0) }
             if !mapped.isEmpty {
                 recentFormats = Array(mapped.prefix(3))
             }
         }
-        
-        // Transform settings
-        if defaults.object(forKey: PersistenceKeys.compressionPercent) != nil {
-            compressionPercent = defaults.double(forKey: PersistenceKeys.compressionPercent)
+
+        if defaults.object(forKey: Keys.compressionPercent) != nil {
+            compressionPercent = defaults.double(forKey: Keys.compressionPercent)
         }
-        if defaults.object(forKey: PersistenceKeys.flipV) != nil {
-            flipV = defaults.bool(forKey: PersistenceKeys.flipV)
+        if defaults.object(forKey: Keys.flipV) != nil {
+            flipV = defaults.bool(forKey: Keys.flipV)
         }
-        if defaults.object(forKey: PersistenceKeys.removeBackground) != nil {
-            removeBackground = defaults.bool(forKey: PersistenceKeys.removeBackground)
+        if defaults.object(forKey: Keys.removeBackground) != nil {
+            removeBackground = defaults.bool(forKey: Keys.removeBackground)
         }
-        if defaults.object(forKey: PersistenceKeys.removeMetadata) != nil {
-            removeMetadata = defaults.bool(forKey: PersistenceKeys.removeMetadata)
+        if defaults.object(forKey: Keys.removeMetadata) != nil {
+            removeMetadata = defaults.bool(forKey: Keys.removeMetadata)
         }
     }
-    
 }
-
-

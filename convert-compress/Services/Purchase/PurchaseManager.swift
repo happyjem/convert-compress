@@ -20,10 +20,13 @@ final class PurchaseManager {
     private var lifetimeRegularProduct: Product?
     private var transactionUpdateTask: Task<Void, Never>?
     
-    private let lifetimeProductId = "lifetime"
-    private let lifetimeRegularProductId = "lifetime_regular"
+    private enum ProductID: String, CaseIterable {
+        case lifetime = "lifetime"
+        case lifetimeRegular = "lifetime_regular"
+    }
+
     private var proEntitlementProductIds: Set<String> {
-        [lifetimeProductId, lifetimeRegularProductId]
+        Set(ProductID.allCases.map(\.rawValue))
     }
     
     // MARK: - Initialization
@@ -49,16 +52,16 @@ final class PurchaseManager {
     
     func loadProducts() async {
         do {
-            let products = try await Product.products(for: [lifetimeProductId, lifetimeRegularProductId])
+            let products = try await Product.products(for: ProductID.allCases.map(\.rawValue))
             
-            lifetimeProduct = products.first(where: { $0.id == lifetimeProductId })
-            lifetimeRegularProduct = products.first(where: { $0.id == lifetimeRegularProductId })
+            lifetimeProduct = products.first(where: { $0.id == ProductID.lifetime.rawValue })
+            lifetimeRegularProduct = products.first(where: { $0.id == ProductID.lifetimeRegular.rawValue })
             
             lifetimeDisplayPrice = lifetimeProduct?.displayPrice
             lifetimeRegularDisplayPrice = lifetimeRegularProduct?.displayPrice
             
         } catch {
-            print("Failed to load products: \(error)")
+            AppLogger.purchase.error("Failed to load products: \(error.localizedDescription, privacy: .public)")
         }
     }
     
@@ -132,14 +135,14 @@ final class PurchaseManager {
                 await transaction.finish()
                 
             case .userCancelled:
-                print("User cancelled purchase")
+                AppLogger.purchase.debug("User cancelled purchase")
             case .pending:
-                print("Purchase Pending")
+                AppLogger.purchase.debug("Purchase pending")
             @unknown default:
                 break
             }
         } catch {
-            print("Purchase failed: \(error)")
+            AppLogger.purchase.error("Purchase failed: \(error.localizedDescription, privacy: .public)")
             purchaseError = "Purchase failed. Please try again."
         }
     }
@@ -158,7 +161,7 @@ final class PurchaseManager {
             try await AppStore.sync()
             await checkEntitlements()
         } catch {
-            print("Restore failed: \(error)")
+            AppLogger.purchase.error("Restore failed: \(error.localizedDescription, privacy: .public)")
             purchaseError = "Restore failed. Please try again."
         }
     }
