@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ClearButton: View {
+struct ClearControl: View {
     @EnvironmentObject private var vm: ImageToolsViewModel
 
     private var clearOldMode: Bool { vm.hasExportedAndNewImages }

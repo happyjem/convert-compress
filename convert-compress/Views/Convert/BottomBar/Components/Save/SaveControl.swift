@@ -1,11 +1,11 @@
 import SwiftUI
 
-struct PrimaryApplyControl: View {
+struct SaveControl: View {
     @EnvironmentObject private var vm: ImageToolsViewModel
     @State private var showDoneText: Bool = false
     
     var body: some View {
-        let controlState = PrimaryApplyControlState(viewModel: vm, showDoneText: showDoneText)
+        let controlState = SaveControlState(viewModel: vm, showDoneText: showDoneText)
         let isInProgress = vm.isExporting
         let height: CGFloat = 40
         let progressWidth: CGFloat = 200
@@ -74,7 +74,7 @@ struct PrimaryApplyControl: View {
     }
 }
 
-private enum PrimaryApplyControlState: Equatable {
+private enum SaveControlState: Equatable {
     case disabled
     case idle
     case ingesting(text: String, progress: Double)
@@ -174,7 +174,7 @@ private enum PrimaryApplyControlState: Equatable {
 }
 
 
-#Preview("PrimaryApplyControl") {
+#Preview("SaveControl") {
     struct Demo: View {
         @State private var disabled = false
         @State private var inProgress = false
@@ -183,7 +183,7 @@ private enum PrimaryApplyControlState: Equatable {
         
         var body: some View {
             VStack(spacing: 20) {
-                PrimaryApplyControl()
+                SaveControl()
                 
                 HStack {
                     Toggle("Disabled", isOn: $disabled)

@@ -9,15 +9,16 @@ struct PipelineBuilder {
         pipeline.finalFormat = configuration.selectedFormat
         pipeline.compressionPercent = configuration.compressionPercent
 
-        if let resizeOperation = EffectiveImageSizing.resizeOperation(for: configuration.resizeSpecification) {
-            pipeline.add(resizeOperation)
-        }
-
-        // Enforce format-specific size constraints before conversion
-        if let format = configuration.selectedFormat {
-            let caps = ImageIOCapabilities.shared
-            if caps.sizeRestrictions(forUTType: format.utType) != nil {
-                pipeline.add(ConstrainSizeOperation(targetFormat: format))
+        if RestrictedFormatSizing.isRestricted(configuration.selectedFormat) {
+            if let format = configuration.selectedFormat {
+                pipeline.add(ConstrainSizeOperation(
+                    targetFormat: format,
+                    resize: configuration.resizeSpecification
+                ))
+            }
+        } else {
+            if let resizeOperation = EffectiveImageSizing.resizeOperation(for: configuration.resizeSpecification) {
+                pipeline.add(resizeOperation)
             }
         }
 

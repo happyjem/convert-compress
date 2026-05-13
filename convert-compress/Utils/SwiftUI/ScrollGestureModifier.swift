@@ -7,10 +7,10 @@ struct ScrollGestureModifier: ViewModifier {
     let sensitivity: Double
     let isEnabled: Bool
     let onScroll: (Int) -> Void
-    
+
     @State private var scrollMonitor: LocalEventMonitor?
     @State private var scrollAccumulator = 0.0
-    
+
     func body(content: Content) -> some View {
         content
             .onHover { isHovering in
@@ -19,14 +19,14 @@ struct ScrollGestureModifier: ViewModifier {
             }
             .onDisappear { removeScrollMonitor() }
     }
-    
+
     private func installScrollMonitor() {
         removeScrollMonitor()
         scrollMonitor = LocalEventMonitor(mask: .scrollWheel) { [self] event in
             guard isEnabled, abs(event.scrollingDeltaX) > 0.1 else { return nil }
-            
+
             scrollAccumulator += event.scrollingDeltaX > 0 ? 1 : -1
-            
+
             if abs(scrollAccumulator) >= sensitivity {
                 let scrollSteps = Int((scrollAccumulator / sensitivity).rounded(.towardZero))
                 scrollAccumulator = scrollAccumulator.truncatingRemainder(dividingBy: sensitivity)
@@ -36,7 +36,7 @@ struct ScrollGestureModifier: ViewModifier {
         }
         scrollMonitor?.start()
     }
-    
+
     private func removeScrollMonitor() {
         scrollMonitor?.stop()
         scrollMonitor = nil

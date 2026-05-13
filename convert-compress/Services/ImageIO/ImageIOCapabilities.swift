@@ -198,29 +198,4 @@ final class ImageIOCapabilities {
         return nil
     }
 
-    /// Validate a CGSize against format restrictions
-    func isValidPixelSize(_ size: CGSize, for utType: UTType) -> Bool {
-        guard let allowed = sizeRestrictions(forUTType: utType) else { return true }
-        let w = Int(size.width.rounded())
-        let h = Int(size.height.rounded())
-        return w == h && allowed.contains(w)
-    }
-
-    /// Suggest a square side length that satisfies restrictions, closest to the given source size
-    func suggestedSquareSide(for utType: UTType, source: CGSize) -> Int? {
-        let base = Int(min(source.width, source.height).rounded())
-        guard let allowed = sizeRestrictions(forUTType: utType) else { return base }
-        // pick nearest allowed side; prefer upscaling to next allowed if equidistant
-        let sorted = allowed.sorted()
-        var best: Int = sorted.first ?? base
-        var bestDist = Int.max
-        for s in sorted {
-            let d = abs(s - base)
-            if d < bestDist || (d == bestDist && s >= base) {
-                best = s
-                bestDist = d
-            }
-        }
-        return best
-    }
 } 

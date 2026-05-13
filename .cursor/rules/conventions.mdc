@@ -26,9 +26,9 @@ convert-compress/
 ├── Shaders/          # Metal shaders
 ├── StoreKit/         # StoreKit configuration
 ├── Theme/
-│   ├── Components/   # Reusable view components, grouped by category
-│   └── Utils/        # Theme-related helpers
+│   └── Components/   # Reusable view components, grouped by category
 ├── Utils/            # Stateless, reusable, non-domain helpers grouped by concern
+│   ├── AppKit/       # AppKit bridges and responder/event helpers
 │   ├── Collections/  # Generic collection/data-structure helpers
 │   ├── Concurrency/  # Generic async/timing helpers
 │   ├── Formatting/   # Generic parsing/formatting helpers

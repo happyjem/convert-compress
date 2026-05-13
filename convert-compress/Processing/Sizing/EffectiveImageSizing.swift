@@ -11,19 +11,23 @@ enum EffectiveImageSizing {
             return CGSize(width: 0, height: 0)
         }
 
-        let effectiveBase = (isVector && resize.hasInput)
+        let usesResizePipeline = resize.hasInput || RestrictedFormatSizing.isRestricted(selectedFormat)
+        let effectiveBase = (isVector && usesResizePipeline)
             ? VectorImageSupport.generousSize(for: baseSize)
             : baseSize
+
+        if let side = RestrictedFormatSizing.targetSquareSide(
+            sourceSize: effectiveBase,
+            resize: resize,
+            format: selectedFormat
+        ) {
+            return CGSize(width: side, height: side)
+        }
+
         var size = ResizeMath.targetSize(for: effectiveBase, input: resize.input, noUpscale: true)
 
         if let cropSize = resize.cropSize {
             size = cropSize
-        }
-
-        if let selectedFormat,
-           ImageIOCapabilities.shared.sizeRestrictions(forUTType: selectedFormat.utType) != nil {
-            let side = min(size.width, size.height)
-            size = CGSize(width: side, height: side)
         }
 
         return size

@@ -8,3 +8,4 @@ enum FirstResponderFocus {
         return firstResponder is NSText || firstResponder is NSTextField
     }
 }
+

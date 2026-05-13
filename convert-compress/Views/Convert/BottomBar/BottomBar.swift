@@ -6,11 +6,11 @@ struct BottomBar: View {
     var body: some View {
         HStack(spacing: 8) {
             HStack(spacing: 8) {
-                ClearButton()
+                ClearControl()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             
-            PrimaryApplyControl()
+            SaveControl()
             
             HStack(spacing: 8) {
                 ExportDirectoryControl(
