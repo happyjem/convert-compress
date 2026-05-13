@@ -78,52 +78,21 @@ extension ImageToolsViewModel {
     // MARK: - Private Methods
 
     private func ingest(urls: [URL]) async {
-        let readableURLs = filterReadableURLs(from: urls)
-        guard !readableURLs.isEmpty else {
-            AppLogger.ingestion.debug("Ingest skip: no readable URLs from \(urls.count, privacy: .public) inputs")
+        let existingURLs = Set(images.map(\.originalURL))
+        guard let prepared = IngestionPlanner().prepare(urls: urls, existingURLs: existingURLs) else {
             return
         }
 
-        AppLogger.ingestion.debug("Ingest start: \(readableURLs.count, privacy: .public) readable URLs")
-
-        let newURLs = filterNewURLs(from: readableURLs)
-        guard !newURLs.isEmpty else {
-            AppLogger.ingestion.debug("Ingest skip: all URLs already present")
-            return
+        if let sourceDirectory = prepared.sourceDirectory {
+            self.sourceDirectory = sourceDirectory
         }
-
-        AppLogger.ingestion.debug("Ingest new URLs: \(newURLs.count, privacy: .public)")
-
-        updateSourceDirectory(from: newURLs)
-        let newAssets = newURLs.map { ImageAsset(url: $0) }
-        prepareIngestionState(for: newAssets.count)
-        images.append(contentsOf: newAssets)
+        ingestionProgress.addToTotal(prepared.assets.count)
+        images.append(contentsOf: prepared.assets)
         
         AppLogger.ingestion.debug("Appended assets. Total images: \(self.images.count, privacy: .public)")
 
-        await loadThumbnails(for: newAssets)
-        AppLogger.ingestion.debug("Ingest complete for batch of \(newURLs.count, privacy: .public) URLs")
-    }
-    
-    private func filterReadableURLs(from urls: [URL]) -> [URL] {
-        urls
-            .filter { ImageIOCapabilities.shared.isReadableURL($0) }
-            .map { $0.standardizedFileURL }
-    }
-    
-    private func filterNewURLs(from urls: [URL]) -> [URL] {
-        let existingURLs = Set(images.map { $0.originalURL })
-        return urls.filter { !existingURLs.contains($0) }
-    }
-    
-    private func updateSourceDirectory(from urls: [URL]) {
-        if let firstDirectory = urls.first?.deletingLastPathComponent() {
-            sourceDirectory = firstDirectory
-        }
-    }
-    
-    private func prepareIngestionState(for count: Int) {
-        ingestionProgress.addToTotal(count)
+        await loadThumbnails(for: prepared.assets)
+        AppLogger.ingestion.debug("Ingest complete for batch of \(prepared.assets.count, privacy: .public) URLs")
     }
     
     private func loadThumbnails(for assets: [ImageAsset]) async {
