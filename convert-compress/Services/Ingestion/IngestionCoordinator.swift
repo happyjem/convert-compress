@@ -46,7 +46,7 @@ enum IngestionCoordinator {
                 return
             }
             
-            Task.detached(priority: .userInitiated) {
+            let producerTask = Task.detached(priority: .userInitiated) {
                 var buffer: [URL] = []
                 
                 func flushBuffer(force: Bool = false) {
@@ -60,20 +60,37 @@ enum IngestionCoordinator {
                 
                 await withTaskGroup(of: [URL].self) { group in
                     for provider in providers {
+                        guard !Task.isCancelled else { break }
+
                         group.addTask {
-                            await processProvider(provider)
+                            guard !Task.isCancelled else { return [] }
+                            return await processProvider(provider)
                         }
                     }
                     
                     for await urls in group {
+                        guard !Task.isCancelled else {
+                            group.cancelAll()
+                            return
+                        }
+
                         guard !urls.isEmpty else { continue }
                         buffer.append(contentsOf: urls)
                         flushBuffer()
                     }
                 }
-                
+
+                guard !Task.isCancelled else {
+                    continuation.finish()
+                    return
+                }
+
                 flushBuffer(force: true)
                 continuation.finish()
+            }
+
+            continuation.onTermination = { _ in
+                producerTask.cancel()
             }
         }
     }
@@ -100,32 +117,6 @@ enum IngestionCoordinator {
         }
         
         return []
-    }
-    
-    /// Presents a system open panel for selecting image files or directories.
-    /// - Parameters:
-    ///   - allowsDirectories: Whether directories can be selected
-    ///   - allowsMultiple: Whether multiple items can be selected
-    ///   - allowedContentTypes: Allowed file types (defaults to images only)
-    ///   - completion: Called with the selected and expanded URLs
-    static func presentOpenPanel(
-        allowsDirectories: Bool = true,
-        allowsMultiple: Bool = true,
-        allowedContentTypes: [UTType] = [.image],
-        completion: @escaping ([URL]) -> Void
-    ) {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = allowsMultiple
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = allowsDirectories
-        panel.allowedContentTypes = allowedContentTypes
-        
-        guard panel.runModal() == .OK else { return }
-        
-        let expanded: [URL] = panel.urls.flatMap { url in
-            return expandToSupportedImageURLs(from: url.standardizedFileURL)
-        }
-        completion(expanded)
     }
     
     // MARK: - Private Helpers
